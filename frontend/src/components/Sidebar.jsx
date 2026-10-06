@@ -67,11 +67,7 @@ export function Sidebar({
         {/* Brand Header */}
         <div className="h-16 px-6 border-b border-white/[0.08] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-orange-500 via-amber-500 to-cyan-400 p-[1.5px] shadow-[0_0_20px_rgba(249,115,22,0.3)]">
-              <div className="w-full h-full bg-[#070b14] rounded-[10px] flex items-center justify-center font-black text-transparent bg-clip-text bg-gradient-to-tr from-orange-400 to-cyan-400 text-sm">
-                DT
-              </div>
-            </div>
+            <img src="/assets/logo/dt-mark.svg" alt="Deployment Tools" className="w-8 h-8 select-none" />
             <div>
               <h1 className="text-sm font-extrabold text-white tracking-wide leading-tight">
                 Deployment Tools

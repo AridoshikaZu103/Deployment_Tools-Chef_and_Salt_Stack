@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%" fill="none">
+  <!-- D Component: Left Spine (Infrastructure Pillar) -->
+  <path d="M16 16 H30 V112 H16 Z" fill="#00F0FF"/>
+
+  <!-- D Component: Foundation & Outer Enclosure Loop -->
+  <path d="M30 98 H78 L112 64 V48 L98 34 H88 L100 46 V58 L72 86 H30 Z" fill="#00F0FF"/>
+
+  <!-- T Component: Orchestration Crossbar -->
+  <path d="M36 16 H112 V30 H36 Z" fill="#F8FAFC"/>
+
+  <!-- T Component: Deployment Pipeline Stem -->
+  <path d="M67 30 H81 V78 H67 Z" fill="#F8FAFC"/>
+
+  <!-- Deployment Execution Pulse Node (Electric Orange) -->
+  <polygon points="74,92 82,82 66,82" fill="#FF5722"/>
+</svg>

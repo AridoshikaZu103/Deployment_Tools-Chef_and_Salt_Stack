@@ -31,11 +31,7 @@ export function Navbar({
 
         {/* Mobile Brand Title */}
         <div className="md:hidden flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-orange-500 to-cyan-400 p-[1px] shadow-sm">
-            <div className="w-full h-full bg-[#070b14] rounded-[7px] flex items-center justify-center font-black text-transparent bg-clip-text bg-gradient-to-tr from-orange-400 to-cyan-400 text-xs">
-              DT
-            </div>
-          </div>
+          <img src="/assets/logo/dt-mark.svg" alt="DT" className="w-6 h-6 select-none" />
           <span className="text-xs font-bold text-white tracking-wide">
             Deployment Tools
           </span>

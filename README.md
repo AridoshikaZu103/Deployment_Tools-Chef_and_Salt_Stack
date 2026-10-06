@@ -1,18 +1,34 @@
-# Nova-Orchestrator
+# DT — Deployment Tools
+## Nova-Orchestrator
 
 > A modern SRE/DevOps deployment control center for Chef, SaltStack, FastAPI, infrastructure environments, and AI-assisted deployment automation.
+
+<p align="center">
+  <img src="./assets/logo/dt-logo.svg" alt="Deployment Tools" width="420">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Brand-DT%20Monogram-00f0ff?style=flat-square" alt="DT Brand">
+  <img src="https://img.shields.io/badge/FastAPI-0.104+-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/React-18.3+-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React">
+  <img src="https://img.shields.io/badge/Chef-Cookbooks-F96854?style=flat-square&logo=chef&logoColor=white" alt="Chef">
+  <img src="https://img.shields.io/badge/SaltStack-Formulas-5A6B82?style=flat-square&logo=saltproject&logoColor=white" alt="SaltStack">
+  <img src="https://img.shields.io/badge/Database-PostgreSQL%20%2F%20Neon-336791?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/AI-Gemini%203.8%20Flash-4285F4?style=flat-square&logo=google&logoColor=white" alt="Gemini">
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT License">
+</p>
 
 ---
 
 ## Overview
 
-**Nova-Orchestrator** is an enterprise-grade Site Reliability Engineering (SRE) and deployment automation platform that unifies configuration management across **Chef** (pull-based, idempotent Ruby cookbooks) and **SaltStack** (push-based, high-speed ZeroMQ YAML state formulas).
+**Deployment Tools (DT)** is an enterprise-grade Site Reliability Engineering (SRE) and deployment orchestration platform that unifies configuration management across **Chef** (pull-based, idempotent Ruby cookbooks) and **SaltStack** (push-based, high-speed ZeroMQ YAML state formulas).
 
 The platform bridges infrastructure code and human operations through **Nova**, an autonomous AI copilot powered by **Google Gemini 3.8 Flash**, featuring a hands-free live voice command center, persistent chat history, and safety-gated execution plans.
 
 ### Core Objectives
 
-* **Dual-Engine Orchestration**: Manage infrastructure with either Chef, SaltStack, or hybrid rollouts across web proxies, API application nodes, databases, and monitoring clusters.
+* **Dual-Engine Orchestration**: Manage infrastructure with either Chef, SaltStack, or hybrid rollouts across web proxies (Nginx), API application servers (FastAPI), databases (PostgreSQL), and monitoring clusters (Prometheus).
 * **Autonomous SRE Copilot**: Consult with Nova AI to generate syntax-validated deployment plans, inspect cookbooks and states, and audit fleet health.
 * **Safety First**: Infrastructure-changing actions require explicit operator confirmation before execution.
 * **Separation of Concerns**: Client browsers interface strictly with the FastAPI backend; configuration management code remains isolated, and secrets never touch frontend code.
@@ -22,35 +38,44 @@ The platform bridges infrastructure code and human operations through **Nova**, 
 ## Architecture
 
 ```text
-                    +-------------------------+
-                    |      React Frontend     |
-                    |       frontend/         |
-                    +------------+------------+
-                                 |
-                                 v
-                    +-------------------------+
-                    |      FastAPI Backend    |
-                    |        backend/         |
-                    +------------+------------+
-                                 |
-               +-----------------+-----------------+
-               v                 v                 v
-        +------------+    +------------+    +--------------+
-        |    Chef    |    | SaltStack  |    |   Nova AI    |
-        |   chef/    |    |   salt/    |    |    Gemini    |
-        +------------+    +------------+    +--------------+
-                                 |
-                                 v
-                       +------------------+
-                       |   environments/  |
-                       | dev/staging/prod |
-                       +------------------+
+                    ┌─────────────────────────┐
+                    │      DT Frontend        │
+                    │      React + Vite       │
+                    │       frontend/         │
+                    └────────────┬────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │      FastAPI Backend    │
+                    │        backend/         │
+                    └────────────┬────────────┘
+                                 │
+             ┌───────────────────┼───────────────────┐
+             ▼                   ▼                   ▼
+        ┌──────────┐       ┌──────────┐       ┌──────────┐
+        │   Chef   │       │ SaltStack│       │ Nova AI  │
+        │  chef/   │       │  salt/   │       │  Gemini  │
+        └──────────┘       └──────────┘       └──────────┘
+                                 │
+                                 ▼
+                      ┌────────────────────┐
+                      │   environments/    │
+                      │ dev/staging/prod   │
+                      └────────────────────┘
 ```
+
+### Directory Roles
+
+* **`frontend/`**: Modern React single-page application built with Vite, Tailwind CSS, Lucide icons, and the official DT branding suite.
+* **`backend/`**: High-performance FastAPI application managing REST endpoints, asynchronous SQLAlchemy ORM sessions, database migrations, and orchestration workers.
+* **`chef/`**: Version-controlled Chef cookbooks containing idempotent recipes for Nginx, FastAPI app server, PostgreSQL, and Prometheus.
+* **`salt/`**: SaltStack state formulas (`.sls`) and pillar configuration trees for push-based cluster convergence.
+* **`environments/`**: Declarative YAML cluster definitions mapping target nodes across `dev`, `staging`, and `production`.
 
 ### Communication Flow
 
 1. **Frontend to Backend**: React (Vite) interacts with the FastAPI REST API over HTTP/JSON (`/api/v1/`) and WebSocket connections for live logs and telemetry.
-2. **Backend to AI**: FastAPI communicates securely with the Google Gemini API (`gemini-3.8-flash`) using a server-side `GEMINI_API_KEY`.
+2. **Backend to AI**: FastAPI communicates securely with Google Gemini (`gemini-3.8-flash`) using a server-side `GEMINI_API_KEY`.
 3. **Backend to Infrastructure Code**: FastAPI reads, validates, and simulates execution of cookbooks (`chef/`) and state formulas (`salt/`) mapped to environment definitions (`environments/`).
 
 ---
@@ -58,45 +83,71 @@ The platform bridges infrastructure code and human operations through **Nova**, 
 ## Repository Structure
 
 ```text
+backend/          FastAPI API and orchestration
+chef/             Chef cookbooks and recipes
+environments/     Development/staging/production configuration
+frontend/         React/Vite UI
+salt/             SaltStack states and pillar
+assets/logo/      DT SVG brand assets
+.github/          CI workflows
+Dockerfile        Standard Docker deployment
+Dockerfile.vercel Vercel container deployment if required
+vercel.json       Vercel configuration
+```
+
+### Complete File Hierarchy
+
+```text
 /
-+-- backend/                # FastAPI application, database models, and API routes
-|   +-- app/
-|   |   +-- api/            # auth, servers, deployments, configs, ai
-|   |   +-- core/           # settings, database, security, initial seed
-|   |   +-- models/         # SQLAlchemy schemas
-|   |   +-- services/       # chef_service, salt_service, health_service
-|   |   +-- main.py         # Application entry point
-|   +-- requirements.txt    # Python dependencies
-|   +-- .env.example        # Backend environment template
-+-- chef/                   # Real Chef infrastructure cookbooks
-|   +-- cookbooks/
-|       +-- app_server/     # FastAPI app server recipe (Ruby)
-|       +-- monitoring/     # Prometheus & Node Exporter recipe (Ruby)
-|       +-- nginx/          # Nginx reverse proxy recipe (Ruby)
-|       +-- postgresql/     # PostgreSQL database server recipe (Ruby)
-+-- environments/           # Declarative cluster definitions
-|   +-- dev.yaml            # Local development cluster mapping
-|   +-- staging.yaml        # Pre-production validation environment
-|   +-- production.yaml     # Live multi-node production infrastructure
-+-- frontend/               # React 18 single-page application (Vite + Tailwind CSS)
-|   +-- src/
-|   |   +-- components/     # UI components, modals, live console, AI views
-|   |   +-- pages/          # Dashboard, Deployments, Servers, Configs, History
-|   |   +-- services/       # API client layer
-|   +-- package.json        # Node.js dependencies and build scripts
-|   +-- .env.example        # Frontend environment template
-+-- salt/                   # Real SaltStack state formulas & pillar data
-|   +-- pillar/             # Pillar data definitions
-|   +-- states/             # SLS formulas: top, common, nginx, app_server, etc.
-+-- .github/
-|   +-- workflows/
-|       +-- ci.yml          # Continuous integration workflow
-+-- .dockerignore           # Container build exclusion rules
-+-- .gitignore              # Repository git ignore specifications
-+-- Dockerfile              # Standard production & local container definition
-+-- Dockerfile.vercel       # Container definition for Vercel deployment model
-+-- vercel.json             # Vercel deployment configuration
-+-- README.md               # Project documentation
+├── assets/
+│   └── logo/
+│       ├── dt-logo.svg           # Primary DT brand lockup with vector typography
+│       ├── dt-logo-white.svg     # Monochrome white brand lockup for dark backgrounds
+│       └── dt-mark.svg           # Standalone geometric DT monogram mark
+├── backend/
+│   ├── api/
+│   │   └── index.py              # Vercel Serverless Function entrypoint
+│   ├── app/
+│   │   ├── api/                  # auth, servers, deployments, configs, ai
+│   │   ├── core/                 # settings, database normalizer, security, seed
+│   │   ├── models/               # SQLAlchemy ORM schemas
+│   │   ├── services/             # chef_service, salt_service, health_service
+│   │   └── main.py               # FastAPI application setup
+│   ├── main.py                   # Root ASGI export module
+│   ├── requirements.txt          # Python dependencies (FastAPI, SQLAlchemy, asyncpg)
+│   ├── vercel.json               # Backend serverless rewrite configuration
+│   └── .env.example              # Backend environment template
+├── chef/
+│   └── cookbooks/
+│       ├── app_server/           # FastAPI application server recipe (Ruby)
+│       ├── monitoring/           # Prometheus & Node Exporter recipe (Ruby)
+│       ├── nginx/                # Nginx reverse proxy recipe (Ruby)
+│       └── postgresql/           # PostgreSQL database recipe (Ruby)
+├── environments/
+│   ├── dev.yaml                  # Local development cluster definition
+│   ├── staging.yaml              # Pre-production validation environment
+│   └── production.yaml           # Multi-node production infrastructure
+├── frontend/
+│   ├── public/
+│   │   └── assets/logo/          # Served static DT SVG assets & favicon
+│   ├── src/
+│   │   ├── components/           # UI components, modals, live console, AI views
+│   │   ├── pages/                # Dashboard, Deployments, Servers, Configs, History
+│   │   └── services/             # Axios API client layer
+│   ├── package.json              # Node.js dependencies and build scripts
+│   └── .env.example              # Frontend environment template
+├── salt/
+│   ├── pillar/                   # SaltStack pillar data trees
+│   └── states/                   # SLS formulas: top, common, nginx, app_server, etc.
+├── .github/
+│   └── workflows/
+│       └── ci.yml                # GitHub Actions CI workflow with SVG validation
+├── .dockerignore                 # Container build exclusion rules
+├── .gitignore                    # Git ignore specifications
+├── Dockerfile                    # Standard production and local container definition
+├── Dockerfile.vercel             # Stateless container definition for Vercel
+├── vercel.json                   # Root monorepo Vercel configuration
+└── README.md                     # Comprehensive platform documentation
 ```
 
 ---
@@ -105,6 +156,7 @@ The platform bridges infrastructure code and human operations through **Nova**, 
 
 | Feature | Implementation Status | Description |
 | :--- | :--- | :--- |
+| **DT Brand Identity** | REAL | Minimalist geometric DT monogram and vector wordmarks in `assets/logo/`. |
 | **FastAPI REST API** | REAL | Full CRUD for servers, deployments, audit records, and auth with JWT. |
 | **Cluster Telemetry** | REAL | Real socket health checks on ports 22, 80, 5432, 8000, 9090 (<1s parallel probe). |
 | **Cookbook & State Viewer** | REAL | Dynamic syntax inspection of Ruby recipes and Salt YAML SLS files. |
@@ -112,13 +164,79 @@ The platform bridges infrastructure code and human operations through **Nova**, 
 | **Live Voice Interaction** | REAL | Web Speech API speech recognition with interim/final separation and SpeechSynthesis TTS. |
 | **Persistent Chat History** | REAL | Chronological message log, plan confirmation cards, auto-scroll with new-message pill. |
 | **Environment Management** | REAL | Declarative YAML targeting for dev, staging, and production tiers. |
-| **Deployment Execution Engine** | SIMULATION / DEV MODE | Simulates realistic Chef runlists and Salt highstates with convergence logs and phase timers when physical bare-metal or cloud targets are absent. |
-| **Chef Server Integration** | SIMULATION / DEV MODE | Simulates knife/chef-zero runs with idempotency checks against local cookbook files. |
-| **Salt Master Integration** | SIMULATION / DEV MODE | Simulates ZeroMQ minion returns (`state.apply`) using local state declarations. |
+| **Deployment Wizard** | REAL | Guided modal for selecting target hosts, recipes/states, and execution strategy. |
+| **Deployment Logs** | REAL | Real-time log streaming with phase timers and ANSI color rendering. |
+| **Audit History** | REAL | Persistent record of all executed deployments with operator attributions. |
+| **Responsive Mobile UI** | REAL | Responsive layouts with desktop multi-column and stacked mobile command center. |
+| **Deployment Execution Engine** | DEVELOPMENT / SIMULATION MODE | Simulates realistic Chef runlists and Salt highstates with convergence logs and phase timers when physical bare-metal or cloud targets are absent. |
+| **Chef Server Integration** | DEVELOPMENT / SIMULATION MODE | Simulates knife/chef-zero runs with idempotency checks against local cookbook files. |
+| **Salt Master Integration** | DEVELOPMENT / SIMULATION MODE | Simulates ZeroMQ minion returns (`state.apply`) using local state declarations. |
 
 ---
 
-## Local Development
+## Database Architecture
+
+The backend utilizes **SQLAlchemy 2.0 (AsyncIO)** with automatic connection string normalization.
+
+```text
+FastAPI Backend
+       │
+       ▼
+  DATABASE_URL
+       │
+       ▼
+PostgreSQL / Neon (Production)  ──OR──  SQLite + aiosqlite (Development)
+```
+
+### Driver & Dialect Support
+
+* **Production (PostgreSQL / Neon)**: The backend automatically converts standard `postgresql://` and `postgres://` connection strings into `postgresql+asyncpg://` and strips incompatible parameters (such as `channel_binding`), enabling direct compatibility with connection poolers.
+* **Development (Local SQLite)**: Uses `sqlite+aiosqlite:///./deployment_tools.db` for zero-configuration local development.
+
+> **CRITICAL SECURITY RULE**:
+> The database connection is **backend-only**. Never expose `DATABASE_URL` to the React client. Database credentials must never be committed to Git.
+
+---
+
+## Vercel Architecture
+
+Deployment Tools can be hosted on Vercel as two coordinated services or a unified monorepo:
+
+```text
+GitHub
+   │
+   ▼
+ Vercel
+   │
+   ├── frontend/
+   │      React + Vite (Static Edge Hosting)
+   │
+   └── backend/
+          FastAPI (Python Serverless Functions / Containers)
+             │
+             ▼
+        PostgreSQL / Neon (External Cloud Database)
+```
+
+### Important Architecture Constraints
+
+* **`chef/`**, **`salt/`**, and **`environments/`** remain version-controlled repository assets inspected by backend services. They are not standalone Vercel frontend applications.
+* The frontend interacts with the backend over REST endpoints (`/api/v1/`).
+* Chef and SaltStack convergence runs in **Development / Simulation Mode** when hosted in serverless cloud environments that do not have direct Layer 2/3 network routes to target bare-metal virtual machines.
+
+---
+
+## Gemini & Security Directives
+
+Nova AI features enterprise security controls:
+
+* **Backend-Only Gemini Key**: The `GEMINI_API_KEY` exists strictly on the backend (`backend/.env` or hosting provider environment settings).
+* **No Client Exposure**: Storing Gemini API keys in frontend environment variables or client code is strictly prohibited. The browser bundle contains zero Gemini credentials.
+* **Explicit Operator Authorization**: Nova formulate and analyzes deployment plans, but **no infrastructure changes are executed automatically**. Every proposed rollout creates a pending plan card that requires the human operator to click **Confirm & Deploy**.
+
+---
+
+## Local Development Quickstart
 
 ### Prerequisites
 
@@ -145,7 +263,7 @@ pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env and supply GEMINI_API_KEY (optional, fallback available)
+# Edit .env and supply GEMINI_API_KEY and DATABASE_URL
 
 # Start FastAPI development server
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
@@ -153,6 +271,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
 The API will be accessible at:
 * API Root: `http://127.0.0.1:8000/`
+* API v1: `http://127.0.0.1:8000/api/v1`
 * Swagger Docs: `http://127.0.0.1:8000/api/docs`
 * Health Check: `http://127.0.0.1:8000/health`
 
@@ -177,207 +296,45 @@ The application will be running at `http://127.0.0.1:5173/`.
 
 ---
 
-## Environment Variables
+## Docker Deployment
 
-### Backend (`backend/.env`)
+The repository provides two production Docker configurations:
 
-```ini
-# Database & Core
-DATABASE_URL=sqlite+aiosqlite:///./deployment_tools.db
-SECRET_KEY=your-production-secret-key-min-32-chars
-ENVIRONMENT=development
-DEBUG=true
-LOG_LEVEL=DEBUG
-
-# CORS Configuration
-CORS_ORIGINS=["http://localhost:5173","http://localhost:3000","http://127.0.0.1:5173"]
-
-# Nova AI Copilot (Google Gemini 3.8 Flash)
-# Obtain key at: https://aistudio.google.com/
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-3.8-flash
-```
-
-### Frontend (`frontend/.env`)
-
-```ini
-# Frontend Environment Configuration
-# All AI requests route securely through the FastAPI backend
-VITE_API_URL=http://localhost:8000/api/v1
-```
-
-> **IMPORTANT SECURITY DIRECTIVE**:
-> Never put `GEMINI_API_KEY` in frontend environment variables. Frontend client bundles are completely public. All AI requests must route through `POST /api/v1/ai/chat` on the FastAPI backend.
-
----
-
-## Nova AI Copilot Workflow
-
-Nova serves as an autonomous Site Reliability Engineer inside the deployment workflow:
-
-```text
-User / Operator
-      |
-      v
-React Frontend (DevOpsAiAgent.jsx / LiveMode.jsx)
-      |
-      v
-FastAPI Backend (POST /api/v1/ai/chat)
-      |
-      v
-Google Gemini 3.8 Flash (Server-Side)
-      |
-      v
-FastAPI Backend (Structured Validation & Plan Parsing)
-      |
-      v
-React Frontend (Rendered Markdown + Actionable Plan Card)
-      |
-      v
-Operator Explicit Confirmation ("Confirm & Deploy")
-      |
-      v
-FastAPI Deployment Pipeline (POST /api/v1/deployments/)
-```
-
-### Safety Policy
-
-Nova can formulate, analyze, and propose deployment plans. However, **no infrastructure changes are executed automatically**. Every proposed rollout creates a pending plan card that requires the human operator to click **Confirm & Deploy** or **Review**.
-
----
-
-## Voice Architecture
-
-The SRE command center provides hands-free voice operations via browser Web Speech APIs:
-
-```text
-Operator Microphone
-        |
-        v
-Browser Speech Recognition (SpeechRecognition / webkitSpeechRecognition)
-        |
-        +---> [Interim Speech] ---> LIVE TRANSCRIPT Display Only
-        |                           (Zero API calls, Zero Chat messages)
-        v
-[Final Speech Validated (isFinal === true)]
-        |
-        v
-Atomic Lock Acquired (Blocks duplicate requests & race conditions)
-        |
-        v
-Exactly ONE Operator Message added to CHAT HISTORY
-        |
-        v
-FastAPI Backend (POST /api/v1/ai/chat)
-        |
-        v
-Gemini 3.8 Flash Processing
-        |
-        v
-Exactly ONE Nova Response added to CHAT HISTORY
-        |
-        v
-Browser Speech Synthesis (SpeechSynthesisUtterance)
-        |
-        v
-Audio Output (Can be cancelled immediately via "Stop Speaking")
-```
-
-### Voice Safeguards
-
-* **Interim Filtering**: Partial speech results only update the `LIVE TRANSCRIPT` monitor.
-* **No Accidental Submissions**: Only `event.results[i].isFinal === true` triggers backend submission.
-* **Request Lock**: Concurrent submissions and speech restart loops are blocked.
-* **Single TTS Output**: Nova speaks aloud exactly once per response; SpeechSynthesis queues are purged before each new utterance.
-* **Shared History**: Both voice and text chat feed into the identical, persistent chat history container.
-
----
-
-## Deployment
-
-### Vercel Deployment
-
-The repository includes a root `vercel.json` configured for a monorepo deployment:
-
-* `frontend/` builds via `@vercel/static-build` using Vite into `dist`.
-* `backend/` runs via `@vercel/python` targeting `backend/app/main.py`.
-* `chef/`, `salt/`, and `environments/` remain version-controlled repository assets inspected by backend services.
-
-> Note: While Vercel hosts the web dashboard and API endpoints, bare-metal convergence against remote VMs requires target network connectivity (e.g. SSH or ZeroMQ ports) or an external runner agent.
-
-### Docker Deployment
-
-The repository provides two purpose-built Docker configurations:
-
-#### 1. Standard Production & Local Container (`Dockerfile`)
-
-Built for standard local development, Docker Compose, or container runtimes (Kubernetes, AWS ECS, GCP Cloud Run):
+### 1. Standard Production Container (`Dockerfile`)
 
 ```bash
 # Build standard production container
 docker build -t nova-orchestrator .
 
-# Run container with dynamic port and healthcheck
+# Run container with healthcheck
 docker run -d \
   --name nova-orchestrator \
   -p 8000:8000 \
   -e PORT=8000 \
-  -e DATABASE_URL="sqlite+aiosqlite:///./deployment_tools.db" \
+  -e DATABASE_URL="postgresql://neondb_owner:password@host/neondb?sslmode=require" \
   -e SECRET_KEY="your-production-secret-key" \
   -e GEMINI_API_KEY="your-gemini-key" \
   nova-orchestrator
 ```
 
-Key features:
-* Uses official `python:3.12-slim` base image.
-* Installs required system packages (`curl`, `openssh-client`, `ruby`).
-* Includes native container `HEALTHCHECK` probing `http://localhost:${PORT:-8000}/health`.
-* Copies only necessary backend and infrastructure source files.
-* Excludes `.env`, `venv`, `node_modules`, and sensitive artifacts via `.dockerignore`.
-* Runs Uvicorn in production mode without `--reload`, respecting `$PORT`.
-
-#### 2. Vercel Container Deployment (`Dockerfile.vercel`)
-
-Built for Vercel's compute container model:
+### 2. Vercel Container (`Dockerfile.vercel`)
 
 ```bash
-# Validate Vercel container build
+# Build Vercel stateless container
 docker build -f Dockerfile.vercel -t nova-orchestrator-vercel .
 ```
-
-Key features:
-* Runs stateless ASGI HTTP server without local persistence dependencies.
-* Listens on `$PORT` injected dynamically by Vercel runtime.
-* Starts immediately without secondary daemons.
-* Zero secrets or `.env` files copied into image layers.
-
----
-
-## Security Audit & Compliance
-
-* **Server-Side Secrets**: `GEMINI_API_KEY` is maintained exclusively on the backend server.
-* **Client Isolation**: The React frontend bundle contains zero infrastructure keys or administrative credentials.
-* **Git & Docker Sanitation**: `.gitignore` and `.dockerignore` strictly ignore all `.env`, `.env.*` (preserving `.env.example` templates), and local database files.
-* **No Direct Shell Execution from Client**: The frontend cannot execute shell commands directly; all tasks route through authenticated FastAPI services.
-* **Operator Authorization**: Rollout commands generated by the AI copilot demand manual confirmation.
 
 ---
 
 ## CI/CD Pipeline
 
-Automated checks run on every push and pull request to `main`, `master`, and `develop` via `.github/workflows/ci.yml`:
+Automated checks run on every push and pull request via `.github/workflows/ci.yml`:
 
-1. **Backend Validation**:
-   * Installs Python 3.12 dependencies from `backend/requirements.txt`.
-   * Verifies Python bytecode compilation and clean FastAPI app initialization.
-2. **Frontend Validation**:
-   * Installs dependencies via `npm ci`.
-   * Builds the production Vite bundle (`npm run build`).
-3. **Configuration Validation**:
-   * Validates YAML syntax across all `environments/*.yaml` files.
-   * Validates `vercel.json` schema and route declarations.
-4. **Docker Image Build**:
-   * Validates both `Dockerfile` and `Dockerfile.vercel` container builds.
+1. **Backend Validation**: Verifies Python bytecode compilation, dependency resolution, and FastAPI application initialization.
+2. **Frontend Validation**: Installs dependencies via `npm ci` and builds the production Vite bundle (`npm run build`).
+3. **Configuration & Spec Validation**: Validates YAML syntax across `environments/*.yaml` and `vercel.json`.
+4. **SVG Brand Logo Validation**: Verifies `dt-logo.svg`, `dt-logo-white.svg`, and `dt-mark.svg` are valid XML, contain valid `viewBox` attributes, have zero raster/base64 data, and contain zero secrets.
+5. **Docker Image Build**: Validates that the container images build without errors.
 
 ---
 

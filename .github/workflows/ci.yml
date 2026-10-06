@@ -101,6 +101,30 @@ jobs:
           print('[CI OK] vercel.json syntax validated')
           "
 
+      - name: Validate DT SVG brand logos
+        run: |
+          python -c "
+          import os, glob, xml.etree.ElementTree as ET
+
+          required_logos = [
+              'assets/logo/dt-logo.svg',
+              'assets/logo/dt-logo-white.svg',
+              'assets/logo/dt-mark.svg'
+          ]
+          for path in required_logos:
+              assert os.path.exists(path), f'Missing required SVG logo: {path}'
+              with open(path, 'r', encoding='utf-8') as fp:
+                  content = fp.read()
+              root = ET.fromstring(content)
+              assert root.tag.endswith('svg'), f'{path} root is not svg'
+              assert 'viewBox' in root.attrib, f'{path} missing viewBox'
+              assert 'data:image' not in content, f'{path} contains embedded raster images'
+              assert '<image' not in content, f'{path} contains external image elements'
+              assert 'AIza' not in content, f'{path} contains secrets'
+              assert 'http://' not in content.replace('http://www.w3.org/2000/svg', ''), f'{path} contains unexpected remote URLs'
+              print(f'[CI OK] Validated SVG logo: {path}')
+          "
+
   docker-build:
     name: Docker Image Build Check
     runs-on: ubuntu-latest
