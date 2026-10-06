@@ -6,6 +6,7 @@ from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+from loguru import logger
 
 from app.core.config import get_settings
 
@@ -79,14 +80,21 @@ async def get_db() -> AsyncSession:
 async def init_db() -> None:
     """Create all tables on application startup and ensure schema migrations."""
     from sqlalchemy import text
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        # Ensure new columns on existing deployments table
-        try:
-            await conn.execute(text("ALTER TABLE deployments ADD COLUMN IF NOT EXISTS engine VARCHAR(20) DEFAULT 'hybrid';"))
-            await conn.execute(text("ALTER TABLE deployments ADD COLUMN IF NOT EXISTS strategy VARCHAR(20) DEFAULT 'rolling';"))
-            await conn.execute(text("ALTER TABLE deployments ADD COLUMN IF NOT EXISTS is_simulation BOOLEAN DEFAULT FALSE;"))
-        except Exception as e:
-            # Table might not exist yet or sqlite/other dialect
-            pass
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            # Ensure new columns on existing deployments table
+            try:
+                await conn.execute(text("ALTER TABLE deployments ADD COLUMN IF NOT EXISTS engine VARCHAR(20) DEFAULT 'hybrid';"))
+                await conn.execute(text("ALTER TABLE deployments ADD COLUMN IF NOT EXISTS strategy VARCHAR(20) DEFAULT 'rolling';"))
+                await conn.execute(text("ALTER TABLE deployments ADD COLUMN IF NOT EXISTS is_simulation BOOLEAN DEFAULT FALSE;"))
+            except Exception:
+                # Table might not exist yet or sqlite/other dialect
+                pass
+    except Exception as e:
+        err_str = str(e).lower()
+        if "already exists" in err_str or "duplicate" in err_str:
+            logger.debug(f"Database schema initialized by peer worker: {e}")
+        else:
+            raise
 

@@ -14,6 +14,7 @@ from typing import List, Optional, Tuple
 from loguru import logger
 from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal, async_session
 from app.core.events import broadcaster
