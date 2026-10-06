@@ -1,0 +1,96 @@
+{
+  "chef_cookbooks": [
+    {
+      "name": "app_server",
+      "version": "1.0.0",
+      "description": "Deploys the FastAPI application server with systemd",
+      "path": "chef/cookbooks/app_server",
+      "recipes": ["default"],
+      "verified": true,
+      "size_bytes": 2748
+    },
+    {
+      "name": "monitoring",
+      "version": "1.0.0",
+      "description": "Installs Prometheus and Node Exporter for monitoring",
+      "path": "chef/cookbooks/monitoring",
+      "recipes": ["default"],
+      "verified": true,
+      "size_bytes": 3853
+    },
+    {
+      "name": "nginx",
+      "version": "1.0.0",
+      "description": "Installs and configures Nginx as a reverse proxy",
+      "path": "chef/cookbooks/nginx",
+      "recipes": ["default"],
+      "verified": true,
+      "size_bytes": 2100
+    },
+    {
+      "name": "postgresql",
+      "version": "1.0.0",
+      "description": "Installs and configures PostgreSQL database server",
+      "path": "chef/cookbooks/postgresql",
+      "recipes": ["default"],
+      "verified": true,
+      "size_bytes": 2720
+    }
+  ],
+  "salt_states": [
+    {
+      "id": "top",
+      "name": "top.sls",
+      "version": "1.0.0",
+      "description": "SaltStack Top File (Environment & Minion Mapping)",
+      "path": "salt/states/top.sls",
+      "verified": true,
+      "size_bytes": 592
+    },
+    {
+      "id": "common",
+      "name": "common.sls",
+      "version": "1.0.0",
+      "description": "Base packages, timezone, chrony NTP, UFW firewall, and sysctl tuning",
+      "path": "salt/states/common.sls",
+      "verified": true,
+      "size_bytes": 2183
+    },
+    {
+      "id": "nginx",
+      "name": "nginx.sls",
+      "version": "1.0.0",
+      "description": "Installs Nginx, configures reverse proxy, and enables service",
+      "path": "salt/states/nginx.sls",
+      "verified": true,
+      "size_bytes": 2702
+    },
+    {
+      "id": "app_server",
+      "name": "app_server.sls",
+      "version": "1.0.0",
+      "description": "FastAPI application daemon, Python 3 virtualenv, and systemd service",
+      "path": "salt/states/app_server.sls",
+      "verified": true,
+      "size_bytes": 3439
+    },
+    {
+      "id": "postgresql",
+      "name": "postgresql.sls",
+      "version": "1.0.0",
+      "description": "PostgreSQL 15 database provisioning, roles, and pg_hba.conf tuning",
+      "path": "salt/states/postgresql.sls",
+      "verified": true,
+      "size_bytes": 3526
+    },
+    {
+      "id": "monitoring",
+      "name": "monitoring.sls",
+      "version": "1.0.0",
+      "description": "Prometheus telemetry server and Node Exporter monitoring agent",
+      "path": "salt/states/monitoring.sls",
+      "verified": true,
+      "size_bytes": 4683
+    }
+  ]
+}

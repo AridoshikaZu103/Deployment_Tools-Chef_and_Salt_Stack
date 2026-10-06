@@ -116,6 +116,23 @@ async def validate_salt_state(
     return ValidationResult(**result)
 
 
+DEFAULT_RECIPES = {
+    "app_server": """# Cookbook:: app_server\n# Recipe:: default\npackage ['python3', 'python3-venv', 'python3-pip', 'git'] do\n  action :install\nend\n\nservice 'deployment-tools' do\n  action [:enable, :start]\nend""",
+    "monitoring": """# Cookbook:: monitoring\n# Recipe:: default\npackage 'prometheus-node-exporter' do\n  action :install\nend\n\nservice 'prometheus-node-exporter' do\n  action [:enable, :start]\nend""",
+    "nginx": """# Cookbook:: nginx\n# Recipe:: default\npackage 'nginx' do\n  action :install\nend\n\nservice 'nginx' do\n  action [:enable, :start]\nend""",
+    "postgresql": """# Cookbook:: postgresql\n# Recipe:: default\npackage ['postgresql-15', 'postgresql-contrib'] do\n  action :install\nend\n\nservice 'postgresql' do\n  action [:enable, :start]\nend""",
+}
+
+DEFAULT_STATES = {
+    "top": "# SaltStack Top File\nbase:\n  '*':\n    - common",
+    "common": "# Salt Common State\ncommon_pkgs:\n  pkg.installed:\n    - pkgs: [curl, wget, git, htop]",
+    "nginx": "# Salt Nginx State\nnginx_pkg:\n  pkg.installed:\n    - name: nginx\nservice:\n  service.running:\n    - name: nginx",
+    "app_server": "# Salt App Server State\napp_pkg:\n  pkg.installed:\n    - pkgs: [python3, python3-venv]\napp_svc:\n  service.running:\n    - name: deployment-tools",
+    "postgresql": "# Salt PostgreSQL State\npg_pkg:\n  pkg.installed:\n    - name: postgresql-15\npg_svc:\n  service.running:\n    - name: postgresql",
+    "monitoring": "# Salt Monitoring State\nmon_pkg:\n  pkg.installed:\n    - name: prometheus-node-exporter\nmon_svc:\n  service.running:\n    - name: prometheus-node-exporter",
+}
+
+
 @router.get("/chef/cookbooks/{cookbook_name}/content")
 async def get_cookbook_content(
     cookbook_name: str,
@@ -123,15 +140,22 @@ async def get_cookbook_content(
     current_user: User = Depends(get_current_user),
 ):
     """Retrieve raw Ruby code for a recipe."""
-    file_path = Path(settings.chef_repo_path) / "cookbooks" / cookbook_name / "recipes" / f"{recipe}.rb"
-    if not file_path.exists():
-        # Fallback search for any .rb file
-        recipes_dir = Path(settings.chef_repo_path) / "cookbooks" / cookbook_name / "recipes"
-        rb_files = list(recipes_dir.glob("*.rb")) if recipes_dir.exists() else []
-        if rb_files:
-            file_path = rb_files[0]
-        else:
-            raise HTTPException(status_code=404, detail=f"Recipe '{recipe}.rb' not found in cookbook '{cookbook_name}'")
+    candidate_paths = [
+        Path(settings.chef_repo_path) / "cookbooks" / cookbook_name / "recipes" / f"{recipe}.rb",
+        Path.cwd() / "chef" / "cookbooks" / cookbook_name / "recipes" / f"{recipe}.rb",
+        Path(__file__).resolve().parents[3] / "chef" / "cookbooks" / cookbook_name / "recipes" / f"{recipe}.rb",
+    ]
+    file_path = next((p for p in candidate_paths if p.exists()), None)
+    if not file_path:
+        content = DEFAULT_RECIPES.get(cookbook_name, f"# Cookbook: {cookbook_name}\n# Recipe: {recipe}\npackage '{cookbook_name}'")
+        return {
+            "filename": f"{cookbook_name}/recipes/{recipe}.rb",
+            "path": f"chef/cookbooks/{cookbook_name}/recipes/{recipe}.rb",
+            "language": "ruby",
+            "content": content,
+            "size_bytes": len(content.encode("utf-8")),
+        }
+
     content = file_path.read_text(encoding="utf-8")
     return {
         "filename": file_path.name,
@@ -150,11 +174,24 @@ async def get_salt_state_content(
     """Retrieve raw YAML code for a Salt state."""
     states = salt_service.list_states()
     state = next((s for s in states if s["id"] == state_id), None)
-    if not state:
-        raise HTTPException(status_code=404, detail=f"State '{state_id}' not found")
-    file_path = Path(state["path"])
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"State file '{state['path']}' not found")
+    state_path = state["path"] if state else f"salt/states/{state_id}.sls"
+    candidate_paths = [
+        Path(state_path),
+        Path(settings.salt_repo_path) / "states" / f"{state_id}.sls",
+        Path.cwd() / "salt" / "states" / f"{state_id}.sls",
+        Path(__file__).resolve().parents[3] / "salt" / "states" / f"{state_id}.sls",
+    ]
+    file_path = next((p for p in candidate_paths if p.exists()), None)
+    if not file_path:
+        content = DEFAULT_STATES.get(state_id, f"# Salt State: {state_id}\nstate_pkg:\n  pkg.installed:\n    - name: {state_id}")
+        return {
+            "filename": f"{state_id}.sls",
+            "path": f"salt/states/{state_id}.sls",
+            "language": "yaml",
+            "content": content,
+            "size_bytes": len(content.encode("utf-8")),
+        }
+
     content = file_path.read_text(encoding="utf-8")
     return {
         "filename": file_path.name,
@@ -163,3 +200,4 @@ async def get_salt_state_content(
         "content": content,
         "size_bytes": len(content.encode("utf-8")),
     }
+

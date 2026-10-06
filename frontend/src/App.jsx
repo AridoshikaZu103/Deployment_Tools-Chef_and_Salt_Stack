@@ -20,6 +20,9 @@ export default function App() {
   const [toolStatus, setToolStatus] = useState(null);
   const [chefCookbooks, setChefCookbooks] = useState([]);
   const [saltStates, setSaltStates] = useState([]);
+  const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
+  const [configsError, setConfigsError] = useState(null);
+  const [isUsingFallbackConfigs, setIsUsingFallbackConfigs] = useState(false);
 
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [isAiAgentOpen, setIsAiAgentOpen] = useState(false);
@@ -35,21 +38,50 @@ export default function App() {
   // Load initial data
   useEffect(() => {
     async function loadData() {
-      const [deps, srvs, tools, cbs, sts] = await Promise.all([
-        api.getDeployments(),
-        api.getServers(),
-        api.getToolStatus(),
-        api.getChefCookbooks(),
-        api.getSaltStates(),
-      ]);
-      setDeployments(deps);
-      setServers(srvs);
-      setToolStatus(tools);
-      setChefCookbooks(cbs);
-      setSaltStates(sts);
+      setIsLoadingConfigs(true);
+      try {
+        const [deps, srvs, tools, cbs, sts] = await Promise.all([
+          api.getDeployments(),
+          api.getServers(),
+          api.getToolStatus(),
+          api.getChefCookbooks(),
+          api.getSaltStates(),
+        ]);
+        setDeployments(deps);
+        setServers(srvs);
+        setToolStatus(tools);
+        setChefCookbooks(cbs);
+        setSaltStates(sts);
+        setIsUsingFallbackConfigs(api.isUsingFallback());
+      } catch (err) {
+        setConfigsError(err.message || 'Network error');
+      } finally {
+        setIsLoadingConfigs(false);
+      }
     }
     loadData();
   }, []);
+
+  const handleRefreshConfigs = async () => {
+    setIsLoadingConfigs(true);
+    setConfigsError(null);
+    try {
+      const [cbs, sts, tools] = await Promise.all([
+        api.getChefCookbooks(),
+        api.getSaltStates(),
+        api.getToolStatus()
+      ]);
+      setChefCookbooks(cbs);
+      setSaltStates(sts);
+      setToolStatus(tools);
+      setIsUsingFallbackConfigs(api.isUsingFallback());
+      showToast('Cookbooks & states refreshed');
+    } catch (err) {
+      setConfigsError(err.message || 'Failed to refresh from backend');
+    } finally {
+      setIsLoadingConfigs(false);
+    }
+  };
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -218,7 +250,14 @@ export default function App() {
             )}
 
             {currentTab === 'configs' && (
-              <Configurations chefCookbooks={chefCookbooks} saltStates={saltStates} />
+              <Configurations
+                chefCookbooks={chefCookbooks}
+                saltStates={saltStates}
+                isLoading={isLoadingConfigs}
+                error={configsError}
+                isFallback={isUsingFallbackConfigs}
+                onRefresh={handleRefreshConfigs}
+              />
             )}
 
             {currentTab === 'history' && (

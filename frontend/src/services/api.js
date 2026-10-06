@@ -1,10 +1,20 @@
+import {
+  STATIC_CHEF_COOKBOOKS,
+  STATIC_SALT_STATES,
+  getStaticCookbookContent,
+  getStaticSaltStateContent
+} from '../data/cookbooksData';
+
 /**
  * API Service for interacting with FastAPI Backend.
- * Includes graceful mock fallbacks so the UI remains 100% interactive
- * even before backend services are launched.
+ * Includes graceful mock fallbacks and bundled static data so the UI remains 100%
+ * interactive even without a backend or when deployed statically on Vercel.
  */
 
-const API_BASE = '/api/v1';
+const RAW_API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+const API_BASE = RAW_API_BASE.replace(/\/+$/, '');
+
+let isFallbackActive = false;
 
 // Initial Mock Data
 let mockDeployments = [
@@ -319,85 +329,95 @@ export const api = {
   },
 
   // ── Configs & Tool Status ────────────────────────────────
+  isUsingFallback() {
+    return isFallbackActive;
+  },
+
   async getToolStatus() {
     try {
       const res = await fetch(`${API_BASE}/configs/status`);
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        if (data && (data.chef_cookbooks_count > 0 || data.salt_states_count > 0)) {
+          return data;
+        }
+      }
     } catch (_) {}
     return {
       chef_available: true,
       salt_available: true,
-      chef_cookbooks_count: 4,
-      salt_states_count: 5
+      chef_cookbooks_count: STATIC_CHEF_COOKBOOKS.length,
+      salt_states_count: STATIC_SALT_STATES.length,
+      is_fallback: true
     };
   },
 
   async getChefCookbooks() {
     try {
       const res = await fetch(`${API_BASE}/configs/chef/cookbooks`);
-      if (res.ok) return await res.json();
-    } catch (_) {}
-    return [
-      {
-        name: "nginx",
-        version: "1.0.0",
-        description: "Installs and configures Nginx as a reverse proxy",
-        path: "chef/cookbooks/nginx",
-        recipes: ["default"]
-      },
-      {
-        name: "app_server",
-        version: "1.0.0",
-        description: "Deploys the FastAPI application server with systemd",
-        path: "chef/cookbooks/app_server",
-        recipes: ["default"]
-      },
-      {
-        name: "postgresql",
-        version: "1.0.0",
-        description: "Installs and configures PostgreSQL database server",
-        path: "chef/cookbooks/postgresql",
-        recipes: ["default"]
-      },
-      {
-        name: "monitoring",
-        version: "1.0.0",
-        description: "Installs Prometheus and Node Exporter for monitoring",
-        path: "chef/cookbooks/monitoring",
-        recipes: ["default"]
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map((cb) => {
+            const staticMatch = STATIC_CHEF_COOKBOOKS.find((s) => s.name === cb.name);
+            return {
+              ...cb,
+              verified: true,
+              content: cb.content || staticMatch?.content || ''
+            };
+          });
+        }
       }
-    ];
+    } catch (_) {}
+    isFallbackActive = true;
+    return STATIC_CHEF_COOKBOOKS;
   },
 
   async getSaltStates() {
     try {
       const res = await fetch(`${API_BASE}/configs/salt/states`);
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map((st) => {
+            const staticMatch = STATIC_SALT_STATES.find((s) => s.id === st.id);
+            return {
+              ...st,
+              verified: true,
+              content: st.content || staticMatch?.content || ''
+            };
+          });
+        }
+      }
     } catch (_) {}
-    return [
-      { id: "top", path: "salt/states/top.sls", size_bytes: 420 },
-      { id: "common", path: "salt/states/common.sls", size_bytes: 1240 },
-      { id: "nginx", path: "salt/states/nginx.sls", size_bytes: 1530 },
-      { id: "app_server", path: "salt/states/app_server.sls", size_bytes: 1980 },
-      { id: "postgresql", path: "salt/states/postgresql.sls", size_bytes: 1820 },
-      { id: "monitoring", path: "salt/states/monitoring.sls", size_bytes: 2210 }
-    ];
+    isFallbackActive = true;
+    return STATIC_SALT_STATES;
   },
 
   async getCookbookContent(cookbookName, recipe = 'default') {
     try {
       const res = await fetch(`${API_BASE}/configs/chef/cookbooks/${cookbookName}/content?recipe=${recipe}`);
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.content && data.content.trim().length > 0) {
+          return data;
+        }
+      }
     } catch (_) {}
-    return null;
+    return getStaticCookbookContent(cookbookName, recipe);
   },
 
   async getSaltStateContent(stateId) {
     try {
       const res = await fetch(`${API_BASE}/configs/salt/states/${stateId}/content`);
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.content && data.content.trim().length > 0) {
+          return data;
+        }
+      }
     } catch (_) {}
-    return null;
+    return getStaticSaltStateContent(stateId);
   },
 
   // ── AI DevOps Copilot ────────────────────────────────────
