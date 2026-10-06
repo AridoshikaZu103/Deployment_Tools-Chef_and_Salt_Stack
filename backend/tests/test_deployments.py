@@ -10,11 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.main import app
 from app.core.database import async_session, init_db
+from app.core.seed import seed_initial_data
 from app.core.security import create_access_token
 from app.models.user import User
 from app.models.deployment import Deployment, DeploymentStep, DeploymentTarget
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def setup_test_db():
+    """Ensure database schema and initial seed data exist before running tests."""
+    await init_db()
+    await seed_initial_data()
 
 
 @pytest_asyncio.fixture
