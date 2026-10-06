@@ -193,6 +193,31 @@ let mockServers = [
   }
 ];
 
+export function normalizeDeployment(d) {
+  if (!d) return d;
+  const rawStatus = (d.status || 'pending').toLowerCase();
+  const normalizedStatus = rawStatus === 'succeeded' ? 'success' : rawStatus;
+  const progressVal = typeof d.progress === 'number'
+    ? d.progress
+    : (normalizedStatus === 'success' ? 100 : (normalizedStatus === 'running' ? 45 : 0));
+
+  return {
+    ...d,
+    id: Number(d.id),
+    name: d.name || `Deployment #${d.id}`,
+    description: d.description || '',
+    environment: (d.environment || 'production').toLowerCase(),
+    tool: (d.tool || d.engine || 'both').toLowerCase(),
+    status: normalizedStatus,
+    progress: progressVal,
+    target_hosts: d.target_hosts || (Array.isArray(d.targets) ? d.targets.join(', ') : 'web-01'),
+    log_output: d.log_output || '',
+    started_at: d.started_at || null,
+    completed_at: d.completed_at || null,
+    created_at: d.created_at || new Date().toISOString(),
+  };
+}
+
 export const api = {
   // ── Deployments ──────────────────────────────────────────
   async getDeployments() {
@@ -200,10 +225,11 @@ export const api = {
       const res = await fetch(`${API_BASE}/deployments/`);
       if (res.ok) {
         const data = await res.json();
-        return data.deployments || data;
+        const list = Array.isArray(data) ? data : (data.deployments || []);
+        return list.map(normalizeDeployment);
       }
     } catch (_) {}
-    return mockDeployments;
+    return mockDeployments.map(normalizeDeployment);
   },
 
   async createDeployment(payload) {
@@ -213,11 +239,14 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const created = await res.json();
+        return normalizeDeployment(created);
+      }
     } catch (_) {}
     
     // Mock create
-    const newDep = {
+    const newDep = normalizeDeployment({
       id: Math.floor(1000 + Math.random() * 9000),
       ...payload,
       status: "pending",
@@ -227,15 +256,21 @@ export const api = {
       started_at: null,
       completed_at: null,
       created_at: new Date().toISOString()
-    };
+    });
     mockDeployments = [newDep, ...mockDeployments];
     return newDep;
   },
 
   async executeDeployment(id) {
     try {
-      const res = await fetch(`${API_BASE}/deployments/${id}/execute`, { method: 'POST' });
-      if (res.ok) return await res.json();
+      let res = await fetch(`${API_BASE}/deployments/${id}/confirm`, { method: 'POST' });
+      if (!res.ok) {
+        res = await fetch(`${API_BASE}/deployments/${id}/execute`, { method: 'POST' });
+      }
+      if (res.ok) {
+        const data = await res.json();
+        return normalizeDeployment(data);
+      }
     } catch (_) {}
 
     const dep = mockDeployments.find(d => d.id === id);
@@ -259,28 +294,36 @@ export const api = {
           dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ All Chef cookbooks and Salt states converged successfully.`;
         }
       }, 3000);
+      return normalizeDeployment(dep);
     }
-    return dep;
+    return normalizeDeployment({ id, status: "running", progress: 45 });
   },
 
   async cancelDeployment(id) {
     try {
       const res = await fetch(`${API_BASE}/deployments/${id}/cancel`, { method: 'POST' });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        return normalizeDeployment(data);
+      }
     } catch (_) {}
 
     const dep = mockDeployments.find(d => d.id === id);
     if (dep) {
       dep.status = "cancelled";
       dep.log_output += `\n[${new Date().toLocaleTimeString()}] Deployment cancelled by operator.`;
+      return normalizeDeployment(dep);
     }
-    return dep;
+    return normalizeDeployment({ id, status: "cancelled" });
   },
 
   async completeDeployment(id) {
     try {
       const res = await fetch(`${API_BASE}/deployments/${id}/complete`, { method: 'POST' });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        return normalizeDeployment(data);
+      }
     } catch (_) {}
 
     const dep = mockDeployments.find(d => d.id === id);
@@ -295,14 +338,18 @@ export const api = {
       } else {
         dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ Convergence completed by operator.`;
       }
+      return normalizeDeployment(dep);
     }
-    return dep;
+    return normalizeDeployment({ id, status: "success", progress: 100 });
   },
 
   async deleteDeployment(id) {
     try {
       const res = await fetch(`${API_BASE}/deployments/${id}`, { method: 'DELETE' });
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        mockDeployments = mockDeployments.filter(d => d.id !== id);
+        return { success: true };
+      }
     } catch (_) {}
 
     mockDeployments = mockDeployments.filter(d => d.id !== id);

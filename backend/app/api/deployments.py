@@ -457,13 +457,12 @@ async def delete_deployment(
 @router.post("/{deployment_id}/execute", response_model=DeploymentResponse)
 async def legacy_execute_deployment(
     deployment_id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Execute alias."""
-    try:
-        return await deployment_service.confirm_deployment(deployment_id, current_user.username)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    """Execute alias that delegates to confirm_deployment and launches executor."""
+    return await confirm_deployment(deployment_id, background_tasks, db, current_user)
 
 
 @router.post("/{deployment_id}/complete", response_model=DeploymentResponse)
@@ -472,21 +471,48 @@ async def legacy_complete_deployment(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Complete alias."""
+    """Complete alias that marks deployment and all steps as converged."""
     stmt = (
         select(Deployment)
-        .options(selectinload(Deployment.steps))
+        .options(
+            selectinload(Deployment.steps),
+            selectinload(Deployment.targets),
+            selectinload(Deployment.logs),
+            selectinload(Deployment.audits),
+        )
         .where(Deployment.id == deployment_id)
     )
     res = await db.execute(stmt)
     dep = res.scalar_one_or_none()
     if not dep:
         raise HTTPException(status_code=404, detail="Deployment not found")
-    dep.status = "SUCCEEDED"
+    dep.status = "SUCCESS"
     dep.progress = 100
     dep.completed_at = datetime.now(timezone.utc)
-    for s in dep.steps:
-        s.status = "SUCCEEDED"
-        s.progress = 100
+    if not dep.started_at:
+        dep.started_at = datetime.now(timezone.utc)
+    if dep.steps:
+        for s in dep.steps:
+            s.status = "SUCCEEDED"
+            s.progress = 100
+    if dep.targets:
+        for t in dep.targets:
+            t.status = "SUCCEEDED"
+            t.progress = 100
+    audit = DeploymentAudit(
+        deployment_id=dep.id,
+        username=current_user.username,
+        action="completed",
+        details="Operator marked deployment as converged (100% complete).",
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(audit)
     await db.commit()
+    await db.refresh(dep)
+    await broadcaster.broadcast({
+        "type": "deployment.updated",
+        "deployment_id": dep.id,
+        "status": dep.status,
+        "progress": dep.progress,
+    })
     return dep

@@ -5,10 +5,12 @@ export function StatusBadge({ status }) {
 
   const styles = {
     success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]',
+    succeeded: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]',
     healthy: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]',
     running: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.25)] animate-pulse',
     degraded: 'bg-amber-500/10 text-amber-300 border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.15)]',
     pending: 'bg-violet-500/10 text-violet-300 border-violet-500/30 shadow-[0_0_12px_rgba(139,92,246,0.15)]',
+    queued: 'bg-amber-500/10 text-amber-300 border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.15)]',
     failed: 'bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-[0_0_12px_rgba(244,63,94,0.15)]',
     unhealthy: 'bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-[0_0_12px_rgba(244,63,94,0.15)]',
     cancelled: 'bg-slate-500/10 text-slate-400 border-slate-600/30',
@@ -17,10 +19,12 @@ export function StatusBadge({ status }) {
 
   const dots = {
     success: 'bg-emerald-400',
+    succeeded: 'bg-emerald-400',
     healthy: 'bg-emerald-400',
     running: 'bg-cyan-400 animate-ping',
     degraded: 'bg-amber-400',
     pending: 'bg-violet-400',
+    queued: 'bg-amber-400',
     failed: 'bg-rose-400',
     unhealthy: 'bg-rose-400',
     cancelled: 'bg-slate-400',

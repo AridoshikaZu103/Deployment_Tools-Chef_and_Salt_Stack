@@ -25,12 +25,13 @@ export function Dashboard({
   onViewLogs,
   onExecuteDeploy,
   onCompleteDeploy,
-  onCancelDeploy
+  onCancelDeploy,
+  onDeleteDeploy
 }) {
-  const activeDeployments = deployments.filter(d => d.status === 'running' || d.status === 'pending');
-  const healthyServers = servers.filter(s => s.health_status === 'healthy');
-  const failedDeployments = deployments.filter(d => d.status === 'failed');
-  const successDeployments = deployments.filter(d => d.status === 'success');
+  const activeDeployments = deployments.filter(d => ['running', 'pending', 'queued'].includes((d.status || '').toLowerCase()));
+  const healthyServers = servers.filter(s => (s.health_status || '').toLowerCase() === 'healthy');
+  const failedDeployments = deployments.filter(d => (d.status || '').toLowerCase() === 'failed');
+  const successDeployments = deployments.filter(d => ['success', 'succeeded'].includes((d.status || '').toLowerCase()));
   const successRate = deployments.length > 0
     ? Math.round((successDeployments.length / deployments.length) * 100)
     : 100;
@@ -188,13 +189,17 @@ export function Dashboard({
                 <div className="w-full bg-[#0b101d] rounded-full h-2 mb-3 overflow-hidden border border-white/[0.05]">
                   <div
                     className={`h-2 rounded-full transition-all duration-500 ${
-                      dep.status === 'failed'
+                      (dep.status || '').toLowerCase() === 'failed'
                         ? 'bg-rose-500'
-                        : dep.status === 'success'
+                        : ['success', 'succeeded'].includes((dep.status || '').toLowerCase())
                         ? 'bg-emerald-400'
-                        : 'bg-gradient-to-r from-orange-400 to-cyan-400 progress-active-stripes shadow-[0_0_10px_#06b6d4]'
+                        : (dep.status || '').toLowerCase() === 'running'
+                        ? 'bg-gradient-to-r from-orange-400 to-cyan-400 progress-active-stripes shadow-[0_0_10px_#06b6d4]'
+                        : (dep.status || '').toLowerCase() === 'cancelled'
+                        ? 'bg-slate-600'
+                        : 'bg-slate-700'
                     }`}
-                    style={{ width: `${dep.progress}%` }}
+                    style={{ width: `${dep.progress || 0}%` }}
                   />
                 </div>
 
@@ -213,7 +218,7 @@ export function Dashboard({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {dep.status === 'pending' && (
+                    {['pending', 'queued'].includes((dep.status || '').toLowerCase()) && (
                       <button
                         onClick={() => onExecuteDeploy(dep.id)}
                         className="px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 font-bold hover:bg-cyan-500/25 border border-cyan-500/30 transition cursor-pointer"
@@ -221,12 +226,20 @@ export function Dashboard({
                         Run Now
                       </button>
                     )}
-                    {dep.status === 'running' && onCompleteDeploy && (
+                    {(dep.status || '').toLowerCase() === 'running' && onCompleteDeploy && (
                       <button
                         onClick={() => onCompleteDeploy(dep.id)}
                         className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 font-bold hover:bg-emerald-500/25 border border-emerald-500/30 transition cursor-pointer"
                       >
                         Complete
+                      </button>
+                    )}
+                    {['running', 'pending', 'queued'].includes((dep.status || '').toLowerCase()) && onCancelDeploy && (
+                      <button
+                        onClick={() => onCancelDeploy(dep.id)}
+                        className="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-300 font-bold hover:bg-rose-500/25 border border-rose-500/30 transition cursor-pointer"
+                      >
+                        Cancel
                       </button>
                     )}
                     <button
@@ -235,6 +248,15 @@ export function Dashboard({
                     >
                       View Logs
                     </button>
+                    {onDeleteDeploy && !['running'].includes((dep.status || '').toLowerCase()) && (
+                      <button
+                        onClick={() => onDeleteDeploy(dep.id)}
+                        className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 font-semibold hover:bg-rose-500/20 border border-rose-500/20 transition cursor-pointer"
+                        title="Delete deployment"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

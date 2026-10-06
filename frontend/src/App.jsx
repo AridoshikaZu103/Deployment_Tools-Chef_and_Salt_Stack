@@ -99,13 +99,13 @@ export default function App() {
 
   // Active progress runner: advances active running deployments step-by-step
   useEffect(() => {
-    const hasRunning = deployments.some((d) => d.status === 'running' && d.progress < 100);
+    const hasRunning = deployments.some((d) => (d.status || '').toLowerCase() === 'running' && d.progress < 100);
     if (!hasRunning) return;
 
     const interval = setInterval(() => {
       setDeployments((prev) =>
         prev.map((dep) => {
-          if (dep.status !== 'running' || dep.progress >= 100) return dep;
+          if ((dep.status || '').toLowerCase() !== 'running' || dep.progress >= 100) return dep;
 
           const nextProgress = Math.min(100, dep.progress + 6);
           const isDone = nextProgress >= 100;
