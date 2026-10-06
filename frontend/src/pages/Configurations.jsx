@@ -67,9 +67,10 @@ export function Configurations({
   });
 
   const handleOpenCookbook = async (cb) => {
+    const fallback = getStaticCookbookContent(cb.name, 'default');
     try {
       const data = await api.getCookbookContent(cb.name, 'default');
-      if (data && data.content) {
+      if (data && data.content && (!fallback?.content || data.content.length >= fallback.content.length * 0.5)) {
         setViewingFile({
           type: 'chef',
           language: 'ruby',
@@ -84,22 +85,22 @@ export function Configurations({
     } catch (_) {}
 
     // Fallback to static bundled code
-    const fallback = getStaticCookbookContent(cb.name, 'default');
     setViewingFile({
       type: 'chef',
       language: 'ruby',
       filename: `${cb.name}/recipes/default.rb`,
-      path: cb.path || fallback.path,
+      path: cb.path || fallback?.path,
       version: cb.version || '1.0.0',
-      size_bytes: cb.size_bytes || fallback.size_bytes,
-      content: cb.content || fallback.content
+      size_bytes: cb.size_bytes || fallback?.size_bytes,
+      content: fallback?.content || cb.content
     });
   };
 
   const handleOpenSaltState = async (st) => {
+    const fallback = getStaticSaltStateContent(st.id);
     try {
       const data = await api.getSaltStateContent(st.id);
-      if (data && data.content) {
+      if (data && data.content && (!fallback?.content || data.content.length >= fallback.content.length * 0.5)) {
         setViewingFile({
           type: 'salt',
           language: 'yaml',
@@ -114,15 +115,14 @@ export function Configurations({
     } catch (_) {}
 
     // Fallback to static bundled code
-    const fallback = getStaticSaltStateContent(st.id);
     setViewingFile({
       type: 'salt',
       language: 'yaml',
       filename: `${st.id}.sls`,
-      path: st.path || fallback.path,
+      path: st.path || fallback?.path,
       version: '1.0.0',
-      size_bytes: st.size_bytes || fallback.size_bytes,
-      content: st.content || fallback.content
+      size_bytes: st.size_bytes || fallback?.size_bytes,
+      content: fallback?.content || st.content
     });
   };
 

@@ -468,29 +468,31 @@ export const api = {
   },
 
   async getCookbookContent(cookbookName, recipe = 'default') {
+    const fallback = getStaticCookbookContent(cookbookName, recipe);
     try {
       const res = await fetch(`${API_BASE}/configs/chef/cookbooks/${cookbookName}/content?recipe=${recipe}`);
       if (res.ok) {
         const data = await res.json();
-        if (data && data.content && data.content.trim().length > 0) {
+        if (data && data.content && (!fallback?.content || data.content.length >= fallback.content.length * 0.5)) {
           return data;
         }
       }
     } catch (_) {}
-    return getStaticCookbookContent(cookbookName, recipe);
+    return fallback;
   },
 
   async getSaltStateContent(stateId) {
+    const fallback = getStaticSaltStateContent(stateId);
     try {
       const res = await fetch(`${API_BASE}/configs/salt/states/${stateId}/content`);
       if (res.ok) {
         const data = await res.json();
-        if (data && data.content && data.content.trim().length > 0) {
+        if (data && data.content && (!fallback?.content || data.content.length >= fallback.content.length * 0.5)) {
           return data;
         }
       }
     } catch (_) {}
-    return getStaticSaltStateContent(stateId);
+    return fallback;
   },
 
   // ── AI DevOps Copilot ────────────────────────────────────

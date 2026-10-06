@@ -10,6 +10,23 @@ from typing import Optional
 from pydantic_settings import BaseSettings
 
 
+def _resolve_repo_path(sub_path: str) -> str:
+    """Resolve directory path checking backend package first, then repo root."""
+    backend_sub = Path(__file__).resolve().parents[2] / sub_path
+    if backend_sub.exists():
+        return str(backend_sub)
+    root_sub = Path(__file__).resolve().parents[3] / sub_path
+    if root_sub.exists():
+        return str(root_sub)
+    cwd_backend_sub = Path.cwd() / "backend" / sub_path
+    if cwd_backend_sub.exists():
+        return str(cwd_backend_sub)
+    cwd_sub = Path.cwd() / sub_path
+    if cwd_sub.exists():
+        return str(cwd_sub)
+    return str(backend_sub)
+
+
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
@@ -34,13 +51,13 @@ class Settings(BaseSettings):
 
     # ── Chef Configuration ───────────────────────────────
     chef_binary: str = "chef-client"
-    chef_repo_path: str = str(Path(__file__).resolve().parents[3] / "chef")
+    chef_repo_path: str = _resolve_repo_path("chef")
     knife_config_path: Optional[str] = None
 
     # ── Salt Stack Configuration ─────────────────────────
     salt_binary: str = "salt"
     salt_master_config: str = "/etc/salt/master"
-    salt_repo_path: str = str(Path(__file__).resolve().parents[3] / "salt")
+    salt_repo_path: str = _resolve_repo_path("salt")
 
     # ── Celery / Redis ───────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"

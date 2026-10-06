@@ -1,0 +1,12 @@
+# Salt managed prometheus.yml
+global:
+  scrape_interval: {{ scrape_interval }}
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'deployment_tools_cluster'
+    static_configs:
+      - targets: ['{{ app_host }}:{{ app_port }}']
