@@ -93,7 +93,10 @@ Failed: 0
     started_at: null,
     completed_at: null,
     created_at: "2026-10-06T07:30:00Z",
-    log_output: "Waiting in queue for target minion availability..."
+    log_output: `[SaltStack] Minion connected: dev-db-01 (Ubuntu 22.04 LTS)
+[SaltStack] Syncing state formulas: common, postgresql...
+[SaltStack] Pillar compilation verified for env: development
+Waiting in queue for target minion availability...`
   }
 ];
 
@@ -237,17 +240,24 @@ export const api = {
 
     const dep = mockDeployments.find(d => d.id === id);
     if (dep) {
+      const toolLabel = dep.tool === 'salt' ? 'SaltStack Engine' : (dep.tool === 'chef' ? 'Chef Engine' : 'Hybrid Orchestration Engine');
       dep.status = "running";
       dep.progress = 45;
       dep.started_at = new Date().toISOString();
-      dep.log_output += `\n[${new Date().toLocaleTimeString()}] Deployment executed via Orchestration Engine...`;
+      dep.log_output += `\n[${new Date().toLocaleTimeString()}] Deployment executed via ${toolLabel}...`;
       
       // Simulate completion after 3s
       setTimeout(() => {
         dep.status = "success";
         dep.progress = 100;
         dep.completed_at = new Date().toISOString();
-        dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ All Chef cookbooks and Salt states converged successfully.`;
+        if (dep.tool === 'salt') {
+          dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ All Salt states converged successfully across target minions.`;
+        } else if (dep.tool === 'chef') {
+          dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ All Chef cookbooks converged successfully across target nodes.`;
+        } else {
+          dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ All Chef cookbooks and Salt states converged successfully.`;
+        }
       }, 3000);
     }
     return dep;
@@ -278,9 +288,25 @@ export const api = {
       dep.status = "success";
       dep.progress = 100;
       dep.completed_at = new Date().toISOString();
-      dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ Convergence completed by operator.`;
+      if (dep.tool === 'salt') {
+        dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ Salt state convergence completed by operator.`;
+      } else if (dep.tool === 'chef') {
+        dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ Chef recipe convergence completed by operator.`;
+      } else {
+        dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ Convergence completed by operator.`;
+      }
     }
     return dep;
+  },
+
+  async deleteDeployment(id) {
+    try {
+      const res = await fetch(`${API_BASE}/deployments/${id}`, { method: 'DELETE' });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    mockDeployments = mockDeployments.filter(d => d.id !== id);
+    return { success: true };
   },
 
   // ── Servers ──────────────────────────────────────────────

@@ -66,6 +66,7 @@ API_PREFIX = "/api/v1"
 
 app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(deployments.router, prefix=API_PREFIX)
+app.include_router(deployments.router, prefix="/api")
 app.include_router(servers.router, prefix=API_PREFIX)
 app.include_router(configs.router, prefix=API_PREFIX)
 app.include_router(ai.router, prefix=API_PREFIX)

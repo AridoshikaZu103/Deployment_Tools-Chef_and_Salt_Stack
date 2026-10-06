@@ -56,7 +56,10 @@ class Settings(BaseSettings):
     log_file: str = "logs/deployment_tools.log"
 
     model_config = {
-        "env_file": ".env",
+        "env_file": [
+            str(Path(__file__).resolve().parents[2] / ".env"),
+            ".env",
+        ],
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
     }

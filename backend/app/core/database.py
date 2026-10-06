@@ -38,17 +38,23 @@ def get_normalized_database_url(raw_url: str) -> str:
     return url
 
 
+from sqlalchemy.pool import NullPool
+
 engine = create_async_engine(
     get_normalized_database_url(settings.database_url),
     echo=settings.debug,
     future=True,
+    poolclass=NullPool,
 )
 
-async_session = async_sessionmaker(
+AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
 )
+
+# Backwards compatibility alias
+async_session = AsyncSessionLocal
 
 
 class Base(DeclarativeBase):
@@ -57,19 +63,30 @@ class Base(DeclarativeBase):
 
 
 async def get_db() -> AsyncSession:
-    """FastAPI dependency that yields a database session."""
-    async with async_session() as session:
+    """FastAPI dependency that yields a request-scoped database session."""
+    async with AsyncSessionLocal() as session:
         try:
             yield session
-            await session.commit()
         except Exception:
-            await session.rollback()
+            if session.is_active:
+                try:
+                    await session.rollback()
+                except Exception:
+                    pass
             raise
-        finally:
-            await session.close()
 
 
 async def init_db() -> None:
-    """Create all tables on application startup."""
+    """Create all tables on application startup and ensure schema migrations."""
+    from sqlalchemy import text
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Ensure new columns on existing deployments table
+        try:
+            await conn.execute(text("ALTER TABLE deployments ADD COLUMN IF NOT EXISTS engine VARCHAR(20) DEFAULT 'hybrid';"))
+            await conn.execute(text("ALTER TABLE deployments ADD COLUMN IF NOT EXISTS strategy VARCHAR(20) DEFAULT 'rolling';"))
+            await conn.execute(text("ALTER TABLE deployments ADD COLUMN IF NOT EXISTS is_simulation BOOLEAN DEFAULT FALSE;"))
+        except Exception as e:
+            # Table might not exist yet or sqlite/other dialect
+            pass
+

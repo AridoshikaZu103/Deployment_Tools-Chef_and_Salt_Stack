@@ -111,14 +111,40 @@ export default function App() {
           const isDone = nextProgress >= 100;
 
           let logLine = '';
-          if (nextProgress >= 74 && nextProgress < 82) {
-            logLine = '\n[Chef Client] Syncing template [/etc/nginx/conf.d/tls.conf] (checksum verified)';
-          } else if (nextProgress >= 82 && nextProgress < 90) {
-            logLine = '\n[Chef Client] Reloading service[nginx] workers without downtime... OK';
-          } else if (nextProgress >= 90 && nextProgress < 100) {
-            logLine = '\n[Chef Client] InSpec compliance verification on staging-web-01... Passed (0 failures)';
-          } else if (isDone) {
-            logLine = '\n✓ [Chef Client] Run complete. 6/6 resources updated.\n✓ Deployment converged successfully across all target nodes.';
+          const tool = (dep.tool || dep.engine || 'hybrid').toLowerCase();
+          const host = dep.target_hosts || 'target-node';
+
+          if (tool === 'salt') {
+            if (nextProgress >= 74 && nextProgress < 82) {
+              logLine = `\n[SaltStack Minion] Syncing state formulas (SLS) and pillar data to minion: ${host}...`;
+            } else if (nextProgress >= 82 && nextProgress < 90) {
+              logLine = `\n[SaltStack Minion] Executing state.apply on minion [${host}]... OK`;
+            } else if (nextProgress >= 90 && nextProgress < 100) {
+              logLine = `\n[SaltStack Minion] Grains verification & compliance check on ${host}... Passed (0 errors)`;
+            } else if (isDone) {
+              logLine = `\n✓ [SaltStack] Highstate execution complete. All states converged successfully.\n✓ Deployment converged successfully across all target minions.`;
+            }
+          } else if (tool === 'chef') {
+            if (nextProgress >= 74 && nextProgress < 82) {
+              logLine = `\n[Chef Client] Syncing template [/etc/nginx/conf.d/tls.conf] on ${host} (checksum verified)`;
+            } else if (nextProgress >= 82 && nextProgress < 90) {
+              logLine = `\n[Chef Client] Reloading service[nginx] workers without downtime... OK`;
+            } else if (nextProgress >= 90 && nextProgress < 100) {
+              logLine = `\n[Chef Client] InSpec compliance verification on ${host}... Passed (0 failures)`;
+            } else if (isDone) {
+              logLine = `\n✓ [Chef Client] Run complete. 6/6 resources updated.\n✓ Deployment converged successfully across all target nodes.`;
+            }
+          } else {
+            // Hybrid (Chef + Salt)
+            if (nextProgress >= 74 && nextProgress < 82) {
+              logLine = `\n[Chef Client] Syncing cookbooks & resolving dependencies... OK`;
+            } else if (nextProgress >= 82 && nextProgress < 90) {
+              logLine = `\n[SaltStack Minion] Applying highstate configuration to minions: ${host}... OK`;
+            } else if (nextProgress >= 90 && nextProgress < 100) {
+              logLine = `\n[Orchestrator] Multi-engine compliance & latency verification... Passed`;
+            } else if (isDone) {
+              logLine = `\n✓ [Orchestrator] Hybrid deployment complete.\n✓ All Chef cookbooks and Salt states converged successfully.`;
+            }
           }
 
           if (isDone) {
@@ -164,6 +190,17 @@ export default function App() {
     const updated = await api.cancelDeployment(id);
     setDeployments((prev) => prev.map((d) => (d.id === id ? { ...d, ...updated } : d)));
     showToast(`Deployment #${id} cancelled.`);
+  };
+
+  const handleDeleteDeploy = async (id) => {
+    if (!window.confirm(`Are you sure you want to delete deployment #${id}?`)) return;
+    try {
+      await api.deleteDeployment(id);
+      setDeployments((prev) => prev.filter((d) => d.id !== id));
+      showToast(`✓ Deployment #${id} deleted successfully.`);
+    } catch (err) {
+      showToast(`Failed to delete deployment #${id}: ${err.message || err}`);
+    }
   };
 
   const handleCheckHealth = async (id) => {
@@ -224,6 +261,7 @@ export default function App() {
                 onExecuteDeploy={handleExecuteDeploy}
                 onCompleteDeploy={handleCompleteDeploy}
                 onCancelDeploy={handleCancelDeploy}
+                onDeleteDeploy={handleDeleteDeploy}
               />
             )}
 
@@ -238,6 +276,7 @@ export default function App() {
                 onExecuteDeploy={handleExecuteDeploy}
                 onCompleteDeploy={handleCompleteDeploy}
                 onCancelDeploy={handleCancelDeploy}
+                onDeleteDeploy={handleDeleteDeploy}
               />
             )}
 

@@ -5,6 +5,10 @@
 # Secrets and local environment files
 .env
 .env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 !.env.example
 !backend/.env.example
 !frontend/.env.example
@@ -12,6 +16,8 @@
 # Python virtual environments & bytecode
 venv
 .venv
+ENV
+env
 backend/venv
 backend/.venv
 __pycache__
@@ -22,22 +28,31 @@ __pycache__
 .mypy_cache
 .ruff_cache
 
-# Node dependencies and build artifacts
+# Testing, Mocks & Test Artifacts
+tests
+backend/tests
+pytest.ini
+.coverage
+htmlcov
+
+# Node dependencies and frontend build artifacts
 node_modules
-frontend/node_modules
-frontend/dist
+frontend
 dist
 build
-
-# Vercel artifacts
 .vercel
 
-# Logs
+# Brand Assets and Documentation
+assets
+*.md
+!README.md
+
+# Logs and runtime artifacts
 *.log
 logs
 backend/logs
 
-# Local databases
+# Local databases and caches
 *.db
 *.sqlite
 *.sqlite3
@@ -45,8 +60,18 @@ backend/*.db
 backend/*.sqlite
 backend/*.sqlite3
 
+# Certificates, Keys & Credentials
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+
 # Editor and OS artifacts
 .vscode
 .idea
+.agents
+.gemini
 .DS_Store
 Thumbs.db

@@ -74,9 +74,11 @@ backend/*.sqlite3
 ehthumbs.db
 Thumbs.db
 
-# IDE and Editor artifacts
+# IDE, Editor & Agent artifacts
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.agents/
+.gemini/

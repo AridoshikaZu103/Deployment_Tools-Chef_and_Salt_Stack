@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StatusBadge, ToolBadge } from '../components/StatusBadge';
 import { ExecutionTimer } from '../components/ExecutionTimer';
 import { formatRelativeTime, formatFullDateTime } from '../utils/time';
-import { Plus, FileText, Play, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, FileText, Play, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
 
 export function Deployments({
   deployments,
@@ -10,7 +10,8 @@ export function Deployments({
   onViewLogs,
   onExecuteDeploy,
   onCompleteDeploy,
-  onCancelDeploy
+  onCancelDeploy,
+  onDeleteDeploy
 }) {
   const [filterTool, setFilterTool] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -172,6 +173,16 @@ export function Deployments({
                 <FileText className="w-3 h-3" />
                 <span>Logs</span>
               </button>
+              {onDeleteDeploy && !['running', 'queued'].includes(dep.status?.toLowerCase()) && (
+                <button
+                  onClick={() => onDeleteDeploy(dep.id)}
+                  className="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+                  title="Delete deployment"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Delete</span>
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -278,6 +289,16 @@ export function Deployments({
                         <FileText className="w-3 h-3" />
                         <span>Logs</span>
                       </button>
+                      {onDeleteDeploy && !['running', 'queued'].includes(dep.status?.toLowerCase()) && (
+                        <button
+                          onClick={() => onDeleteDeploy(dep.id)}
+                          className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 font-semibold transition cursor-pointer flex items-center gap-1"
+                          title="Delete deployment"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete</span>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
