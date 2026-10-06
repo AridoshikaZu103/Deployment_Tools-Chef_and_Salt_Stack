@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --chef-orange: #f97316;
+  --chef-orange-soft: rgba(249, 115, 22, 0.15);
+  --salt-blue: #0284c7;
+  --salt-cyan: #06b6d4;
+  --salt-cyan-soft: rgba(6, 182, 212, 0.15);
+  --background: #070b14;
+  --panel: #0b1120;
+  --panel-hover: #10192e;
+  --border: rgba(255, 255, 255, 0.08);
+  --ai-purple: #a855f7;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #f43f5e;
+  --text: #f1f5f9;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--text);
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-image: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(6, 182, 212, 0.08), transparent 70%),
+      radial-gradient(ellipse 60% 40% at 90% 100%, rgba(249, 115, 22, 0.06), transparent 70%);
+    background-attachment: fixed;
+  }
+  
+  code, pre {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #05070d;
+}
+::-webkit-scrollbar-thumb {
+  background: #192338;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a3a5a;
+}
+
+/* Unified Component Surfaces */
+.card-cyber {
+  background-color: #0b101d;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-cyber:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.7);
+}
+
+.card-cyber-elevated {
+  background-color: #0f1627;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 35px -5px rgba(0, 0, 0, 0.8);
+}
+
+/* Ambient glow accents */
+.glow-chef-box {
+  box-shadow: 0 0 30px -5px rgba(249, 115, 22, 0.25);
+}
+
+.glow-salt-box {
+  box-shadow: 0 0 30px -5px rgba(6, 182, 212, 0.25);
+}
+
+.glow-hybrid-box {
+  box-shadow: 0 0 30px -5px rgba(139, 92, 246, 0.2);
+}
+
+.glow-terminal {
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.8), 0 0 20px -3px rgba(6, 182, 212, 0.15);
+}
+
+.glass-cyber-panel {
+  background: rgba(11, 16, 29, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(6, 182, 212, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+}
+
+/* Distinct Tutorial Blueprint & Grid Background */
+.tutorial-blueprint-bg {
+  background-color: #050813;
+  background-image: 
+    linear-gradient(rgba(6, 182, 212, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(249, 115, 22, 0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Micro-animations */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(0.98); }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2.5s ease-in-out infinite;
+}
+
+/* Animated stripes for active progress bar loading state */
+@keyframes progress-stripes {
+  0% { background-position: 1.5rem 0; }
+  100% { background-position: 0 0; }
+}
+
+.progress-active-stripes {
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.25) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.25) 50%,
+    rgba(255, 255, 255, 0.25) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 1.5rem 1.5rem;
+  animation: progress-stripes 0.8s linear infinite;
+}
+
+/* Soundwave animations */
+@keyframes soundwave-1 {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+@keyframes soundwave-2 {
+  0%, 100% { height: 14px; }
+  50% { height: 6px; }
+}
+@keyframes soundwave-3 {
+  0%, 100% { height: 8px; }
+  50% { height: 20px; }
+}
+.animate-soundwave-1 { animation: soundwave-1 0.6s ease-in-out infinite; }
+.animate-soundwave-2 { animation: soundwave-2 0.7s ease-in-out infinite 0.15s; }
+.animate-soundwave-3 { animation: soundwave-3 0.5s ease-in-out infinite 0.3s; }
+
+/* Live Neural Hologram & Spectrum Animations */
+@keyframes spin-slow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes spin-reverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes neural-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; filter: drop-shadow(0 0 15px rgba(6,182,212,0.4)); }
+  50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 30px rgba(139,92,246,0.6)); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 18s linear infinite;
+}
+.animate-spin-reverse {
+  animation: spin-reverse 14s linear infinite;
+}
+.animate-neural-pulse {
+  animation: neural-pulse 3s ease-in-out infinite;
+}
+
+/* Code Line Highlight Glow */
+@keyframes line-highlight-pulse {
+  0%, 100% { background-color: rgba(249, 115, 22, 0.12); border-left-color: #f97316; }
+  50% { background-color: rgba(6, 182, 212, 0.15); border-left-color: #06b6d4; }
+}
+
+.line-highlight {
+  animation: line-highlight-pulse 2s ease-in-out infinite;
+  border-left-width: 3px;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,43 @@
+# Production Environment Definition
+name: production
+description: High-availability live infrastructure
+version: 1.0.0
+
+servers:
+  - hostname: prod-web-01
+    ip: 192.168.10.11
+    roles: [webserver]
+    managed_by: chef
+  - hostname: prod-app-01
+    ip: 192.168.10.21
+    roles: [appserver]
+    managed_by: both
+  - hostname: prod-app-02
+    ip: 192.168.10.22
+    roles: [appserver]
+    managed_by: both
+  - hostname: prod-db-01
+    ip: 192.168.10.31
+    roles: [database]
+    managed_by: salt
+  - hostname: prod-mon-01
+    ip: 192.168.10.41
+    roles: [monitoring]
+    managed_by: salt
+
+orchestration:
+  chef:
+    environment: production
+  salt:
+    environment: production
+
+database:
+  engine: postgresql
+  host: 192.168.10.31
+  port: 5432
+  name: deployment_tools_prod
+  ssl_mode: require
+
+monitoring:
+  scrape_interval: 10s
+  retention: 30d

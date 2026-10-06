@@ -1,0 +1,33 @@
+# Staging Environment Definition
+name: staging
+description: Pre-production verification and QA environment
+version: 1.0.0
+
+servers:
+  - hostname: stg-web-01
+    ip: 192.168.20.11
+    roles: [webserver]
+    managed_by: chef
+  - hostname: stg-app-01
+    ip: 192.168.20.21
+    roles: [appserver]
+    managed_by: both
+  - hostname: stg-db-01
+    ip: 192.168.20.31
+    roles: [database]
+    managed_by: salt
+
+orchestration:
+  chef:
+    environment: staging
+  salt:
+    environment: staging
+
+database:
+  engine: postgresql
+  host: 192.168.20.31
+  port: 5432
+  name: deployment_tools_staging
+
+monitoring:
+  scrape_interval: 15s

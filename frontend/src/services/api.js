@@ -1,0 +1,421 @@
+/**
+ * API Service for interacting with FastAPI Backend.
+ * Includes graceful mock fallbacks so the UI remains 100% interactive
+ * even before backend services are launched.
+ */
+
+const API_BASE = '/api/v1';
+
+// Initial Mock Data
+let mockDeployments = [
+  {
+    id: 101,
+    name: "Deploy Full Production Stack",
+    description: "Orchestrate Nginx reverse proxy + FastAPI cluster + PostgreSQL + Prometheus",
+    environment: "production",
+    tool: "both",
+    target_hosts: "web-01, app-01, app-02, db-01, mon-01",
+    status: "success",
+    progress: 100,
+    created_by: 1,
+    chef_runlist: "recipe[nginx::default], recipe[app_server::default]",
+    salt_states: "common, postgresql, monitoring",
+    started_at: "2026-10-06T06:15:00Z",
+    completed_at: "2026-10-06T06:18:24Z",
+    created_at: "2026-10-06T06:14:30Z",
+    log_output: `[Chef Client] Starting run at 2026-10-06 06:15:02 UTC
+[Chef] Resolving cookbooks: nginx (1.0.0), app_server (1.0.0)
+[Chef] Recipe: nginx::default
+  * package[nginx] action install (up to date)
+  * template[/etc/nginx/sites-available/app_proxy.conf] action create (updated)
+  * service[nginx] action reload (reloaded)
+[Salt Stack] Applying highstate to minions: db-01, mon-01
+----------
+          ID: postgresql_packages
+    Function: pkg.installed
+      Result: True (packages already present)
+----------
+          ID: create_database
+    Function: cmd.run
+      Result: True (database 'deployment_tools' verified)
+----------
+          ID: prometheus_service
+    Function: service.running
+      Result: True (running on port 9090)
+Summary for minions: 2
+Succeeded: 14 (changed=2)
+Failed: 0
+✓ Full stack deployment completed in 204 seconds.`
+  },
+  {
+    id: 102,
+    name: "Rollout Nginx Security & TLS Patch",
+    description: "Update Nginx configuration and reload workers without downtime",
+    environment: "staging",
+    tool: "chef",
+    target_hosts: "staging-web-01",
+    status: "running",
+    progress: 68,
+    created_by: 1,
+    chef_runlist: "recipe[nginx::default]",
+    salt_states: null,
+    started_at: "2026-10-06T07:10:12Z",
+    completed_at: null,
+    created_at: "2026-10-06T07:09:40Z",
+    log_output: `[Chef Client] Syncing cookbooks...
+[Chef] Validating syntax for recipe[nginx::default]... OK
+[Chef] Rendering template /etc/nginx/nginx.conf with worker_processes=auto
+[Chef] Executing nginx -t syntax verification... Syntax OK
+[Chef] Reloading service[nginx]... In progress`
+  },
+  {
+    id: 103,
+    name: "Provision Dev Database & Seeds",
+    description: "Apply PostgreSQL states and initial schema migrations",
+    environment: "development",
+    tool: "salt",
+    target_hosts: "dev-db-01",
+    status: "pending",
+    progress: 0,
+    created_by: 1,
+    chef_runlist: null,
+    salt_states: "common, postgresql",
+    started_at: null,
+    completed_at: null,
+    created_at: "2026-10-06T07:30:00Z",
+    log_output: "Waiting in queue for target minion availability..."
+  }
+];
+
+let mockServers = [
+  {
+    id: 1,
+    hostname: "prod-web-01",
+    ip_address: "192.168.10.11",
+    fqdn: "web01.production.internal",
+    environment: "production",
+    role: "webserver",
+    os_family: "Ubuntu 22.04 LTS",
+    managed_by: "chef",
+    is_active: true,
+    health_status: "healthy",
+    last_health_check: "2 minutes ago",
+    chef_node_name: "prod-web-01.node",
+    salt_minion_id: null
+  },
+  {
+    id: 2,
+    hostname: "prod-app-01",
+    ip_address: "192.168.10.21",
+    fqdn: "app01.production.internal",
+    environment: "production",
+    role: "appserver",
+    os_family: "Ubuntu 22.04 LTS",
+    managed_by: "both",
+    is_active: true,
+    health_status: "healthy",
+    last_health_check: "1 minute ago",
+    chef_node_name: "prod-app-01.node",
+    salt_minion_id: "minion-prod-app-01"
+  },
+  {
+    id: 3,
+    hostname: "prod-db-01",
+    ip_address: "192.168.10.31",
+    fqdn: "db01.production.internal",
+    environment: "production",
+    role: "database",
+    os_family: "Debian 12",
+    managed_by: "salt",
+    is_active: true,
+    health_status: "healthy",
+    last_health_check: "3 minutes ago",
+    chef_node_name: null,
+    salt_minion_id: "minion-prod-db-01"
+  },
+  {
+    id: 4,
+    hostname: "prod-mon-01",
+    ip_address: "192.168.10.41",
+    fqdn: "mon01.production.internal",
+    environment: "production",
+    role: "monitoring",
+    os_family: "Ubuntu 22.04 LTS",
+    managed_by: "salt",
+    is_active: true,
+    health_status: "healthy",
+    last_health_check: "Just now",
+    chef_node_name: null,
+    salt_minion_id: "minion-prod-mon-01"
+  },
+  {
+    id: 5,
+    hostname: "stg-app-01",
+    ip_address: "192.168.20.21",
+    fqdn: "app01.staging.internal",
+    environment: "staging",
+    role: "appserver",
+    os_family: "Ubuntu 22.04 LTS",
+    managed_by: "both",
+    is_active: true,
+    health_status: "degraded",
+    last_health_check: "5 minutes ago",
+    chef_node_name: "stg-app-01.node",
+    salt_minion_id: "minion-stg-app-01"
+  },
+  {
+    id: 6,
+    hostname: "dev-all-in-one",
+    ip_address: "127.0.0.1",
+    fqdn: "dev-box.local",
+    environment: "development",
+    role: "appserver",
+    os_family: "Debian 12 / Docker",
+    managed_by: "both",
+    is_active: true,
+    health_status: "healthy",
+    last_health_check: "Just now",
+    chef_node_name: "local-dev.node",
+    salt_minion_id: "local-dev-minion"
+  }
+];
+
+export const api = {
+  // ── Deployments ──────────────────────────────────────────
+  async getDeployments() {
+    try {
+      const res = await fetch(`${API_BASE}/deployments/`);
+      if (res.ok) {
+        const data = await res.json();
+        return data.deployments || data;
+      }
+    } catch (_) {}
+    return mockDeployments;
+  },
+
+  async createDeployment(payload) {
+    try {
+      const res = await fetch(`${API_BASE}/deployments/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    
+    // Mock create
+    const newDep = {
+      id: Math.floor(1000 + Math.random() * 9000),
+      ...payload,
+      status: "pending",
+      progress: 0,
+      created_by: 1,
+      log_output: "Deployment queued.",
+      started_at: null,
+      completed_at: null,
+      created_at: new Date().toISOString()
+    };
+    mockDeployments = [newDep, ...mockDeployments];
+    return newDep;
+  },
+
+  async executeDeployment(id) {
+    try {
+      const res = await fetch(`${API_BASE}/deployments/${id}/execute`, { method: 'POST' });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    const dep = mockDeployments.find(d => d.id === id);
+    if (dep) {
+      dep.status = "running";
+      dep.progress = 45;
+      dep.started_at = new Date().toISOString();
+      dep.log_output += `\n[${new Date().toLocaleTimeString()}] Deployment executed via Orchestration Engine...`;
+      
+      // Simulate completion after 3s
+      setTimeout(() => {
+        dep.status = "success";
+        dep.progress = 100;
+        dep.completed_at = new Date().toISOString();
+        dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ All Chef cookbooks and Salt states converged successfully.`;
+      }, 3000);
+    }
+    return dep;
+  },
+
+  async cancelDeployment(id) {
+    try {
+      const res = await fetch(`${API_BASE}/deployments/${id}/cancel`, { method: 'POST' });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    const dep = mockDeployments.find(d => d.id === id);
+    if (dep) {
+      dep.status = "cancelled";
+      dep.log_output += `\n[${new Date().toLocaleTimeString()}] Deployment cancelled by operator.`;
+    }
+    return dep;
+  },
+
+  async completeDeployment(id) {
+    try {
+      const res = await fetch(`${API_BASE}/deployments/${id}/complete`, { method: 'POST' });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    const dep = mockDeployments.find(d => d.id === id);
+    if (dep) {
+      dep.status = "success";
+      dep.progress = 100;
+      dep.completed_at = new Date().toISOString();
+      dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ Convergence completed by operator.`;
+    }
+    return dep;
+  },
+
+  // ── Servers ──────────────────────────────────────────────
+  async getServers() {
+    try {
+      const res = await fetch(`${API_BASE}/servers/`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return mockServers;
+  },
+
+  async checkServerHealth(id) {
+    try {
+      const res = await fetch(`${API_BASE}/servers/${id}/health-check`, { method: 'POST' });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    const server = mockServers.find(s => s.id === id);
+    if (server) {
+      server.health_status = "healthy";
+      server.last_health_check = "Just now";
+    }
+    return {
+      hostname: server?.hostname || "unknown",
+      health_status: "healthy",
+      checked_at: new Date().toISOString(),
+      checks: [
+        { name: "SSH Connectivity (22)", status: "pass" },
+        { name: "Service Daemon Status", status: "pass" },
+        { name: "HTTP / TCP Endpoint Check", status: "pass" }
+      ]
+    };
+  },
+
+  async checkAllServersHealth() {
+    try {
+      const res = await fetch(`${API_BASE}/servers/health-check-all`, { method: 'POST' });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+
+    mockServers.forEach(s => {
+      s.health_status = "healthy";
+      s.last_health_check = "Just now";
+    });
+    return mockServers;
+  },
+
+  // ── Configs & Tool Status ────────────────────────────────
+  async getToolStatus() {
+    try {
+      const res = await fetch(`${API_BASE}/configs/status`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return {
+      chef_available: true,
+      salt_available: true,
+      chef_cookbooks_count: 4,
+      salt_states_count: 5
+    };
+  },
+
+  async getChefCookbooks() {
+    try {
+      const res = await fetch(`${API_BASE}/configs/chef/cookbooks`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return [
+      {
+        name: "nginx",
+        version: "1.0.0",
+        description: "Installs and configures Nginx as a reverse proxy",
+        path: "chef/cookbooks/nginx",
+        recipes: ["default"]
+      },
+      {
+        name: "app_server",
+        version: "1.0.0",
+        description: "Deploys the FastAPI application server with systemd",
+        path: "chef/cookbooks/app_server",
+        recipes: ["default"]
+      },
+      {
+        name: "postgresql",
+        version: "1.0.0",
+        description: "Installs and configures PostgreSQL database server",
+        path: "chef/cookbooks/postgresql",
+        recipes: ["default"]
+      },
+      {
+        name: "monitoring",
+        version: "1.0.0",
+        description: "Installs Prometheus and Node Exporter for monitoring",
+        path: "chef/cookbooks/monitoring",
+        recipes: ["default"]
+      }
+    ];
+  },
+
+  async getSaltStates() {
+    try {
+      const res = await fetch(`${API_BASE}/configs/salt/states`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return [
+      { id: "top", path: "salt/states/top.sls", size_bytes: 420 },
+      { id: "common", path: "salt/states/common.sls", size_bytes: 1240 },
+      { id: "nginx", path: "salt/states/nginx.sls", size_bytes: 1530 },
+      { id: "app_server", path: "salt/states/app_server.sls", size_bytes: 1980 },
+      { id: "postgresql", path: "salt/states/postgresql.sls", size_bytes: 1820 },
+      { id: "monitoring", path: "salt/states/monitoring.sls", size_bytes: 2210 }
+    ];
+  },
+
+  async getCookbookContent(cookbookName, recipe = 'default') {
+    try {
+      const res = await fetch(`${API_BASE}/configs/chef/cookbooks/${cookbookName}/content?recipe=${recipe}`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return null;
+  },
+
+  async getSaltStateContent(stateId) {
+    try {
+      const res = await fetch(`${API_BASE}/configs/salt/states/${stateId}/content`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return null;
+  },
+
+  // ── AI DevOps Copilot ────────────────────────────────────
+  async askAiAgent(prompt, context = {}) {
+    try {
+      const res = await fetch(`${API_BASE}/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          agent_name: 'Nova-Orchestrator',
+          context
+        })
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (_) {}
+    return null;
+  }
+};

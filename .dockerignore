@@ -1,0 +1,52 @@
+# Version control & CI
+.git
+.github
+
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# Python virtual environments & bytecode
+venv
+.venv
+backend/venv
+backend/.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Node dependencies and build artifacts
+node_modules
+frontend/node_modules
+frontend/dist
+dist
+build
+
+# Vercel artifacts
+.vercel
+
+# Logs
+*.log
+logs
+backend/logs
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+
+# Editor and OS artifacts
+.vscode
+.idea
+.DS_Store
+Thumbs.db

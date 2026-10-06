@@ -1,0 +1,33 @@
+# Development Environment Definition
+name: development
+description: Local testing and development cluster
+version: 1.0.0
+
+servers:
+  - hostname: dev-all-in-one
+    ip: 127.0.0.1
+    roles: [webserver, appserver, database, monitoring]
+    managed_by: both
+
+orchestration:
+  chef:
+    environment: _default
+    run_list:
+      - recipe[nginx::default]
+      - recipe[app_server::default]
+  salt:
+    environment: base
+    states:
+      - common
+      - nginx
+      - app_server
+      - postgresql
+      - monitoring
+
+database:
+  engine: sqlite
+  sqlite_path: ./deployment_tools.db
+  debug: true
+
+monitoring:
+  scrape_interval: 30s

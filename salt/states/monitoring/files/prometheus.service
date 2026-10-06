@@ -1,0 +1,12 @@
+[Unit]
+Description=Prometheus Monitoring (Salt Managed)
+After=network.target
+
+[Service]
+Type=simple
+User={{ user }}
+ExecStart=/usr/local/bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
