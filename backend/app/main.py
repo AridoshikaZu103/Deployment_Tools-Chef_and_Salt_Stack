@@ -54,6 +54,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -82,6 +83,25 @@ async def root():
         "environment": settings.environment,
         "docs": "/api/docs",
         "api_prefix": API_PREFIX,
+    }
+
+
+@app.get("/api/v1", tags=["Root"])
+async def api_v1_root():
+    """API v1 root information and service discovery."""
+    return {
+        "status": "online",
+        "service": "Nova-Orchestrator Backend API",
+        "version": settings.app_version,
+        "environment": settings.environment,
+        "endpoints": {
+            "health": "/health",
+            "docs": "/api/docs",
+            "servers": f"{API_PREFIX}/servers/",
+            "deployments": f"{API_PREFIX}/deployments/",
+            "configs": f"{API_PREFIX}/configs/status",
+            "ai": f"{API_PREFIX}/ai/status",
+        },
     }
 
 
