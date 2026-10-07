@@ -1,6 +1,30 @@
 {
   "rewrites": [
     {
+      "source": "/api/health/probe/:id",
+      "destination": "/api/health?endpoint=probe&id=:id"
+    },
+    {
+      "source": "/api/health/probe",
+      "destination": "/api/health?endpoint=probe"
+    },
+    {
+      "source": "/api/health/fleet/:id",
+      "destination": "/api/health?endpoint=fleet&id=:id"
+    },
+    {
+      "source": "/api/health/fleet",
+      "destination": "/api/health?endpoint=fleet"
+    },
+    {
+      "source": "/api/health/heartbeat",
+      "destination": "/api/health?endpoint=heartbeat"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/health"
+    },
+    {
       "source": "/api/deployments/:id/execute",
       "destination": "/api/deployments?id=:id&action=execute"
     },

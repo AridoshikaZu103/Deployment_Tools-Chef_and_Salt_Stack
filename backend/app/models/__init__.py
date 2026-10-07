@@ -11,6 +11,13 @@ from app.models.deployment import (
     DeploymentLog,
     DeploymentAudit,
 )
+from app.models.health import (
+    HealthCheck,
+    HealthCheckResult,
+    FleetHealthRun,
+    RunnerHeartbeat,
+    AuditLog,
+)
 
 __all__ = [
     "User",
@@ -20,4 +27,9 @@ __all__ = [
     "DeploymentTarget",
     "DeploymentLog",
     "DeploymentAudit",
+    "HealthCheck",
+    "HealthCheckResult",
+    "FleetHealthRun",
+    "RunnerHeartbeat",
+    "AuditLog",
 ]

@@ -158,3 +158,9 @@ export function formatDate(dateInput) {
   }
 }
 
+export function isHealthStale(dateInput, maxMinutes = 10) {
+  const date = parseDate(dateInput);
+  if (!date) return true;
+  return (Date.now() - date.getTime()) > maxMinutes * 60 * 1000;
+}
+

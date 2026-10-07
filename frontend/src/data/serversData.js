@@ -1,6 +1,7 @@
 /**
  * Bundled Server Inventory - Single Source of Truth
  * All nodes across Production, Staging, and Development.
+ * Seed health set to 'unknown' until verified by diagnostic probe or runner.
  */
 
 export const BUNDLED_SERVERS = [
@@ -14,8 +15,10 @@ export const BUNDLED_SERVERS = [
     os_family: "Ubuntu 22.04 LTS",
     managed_by: "chef",
     is_active: true,
-    health_status: "healthy",
-    last_health_check: "2026-10-06T15:26:46.313Z",
+    health_status: "unknown",
+    health: "unknown",
+    last_health_check: null,
+    last_checked: null,
     chef_node_name: "prod-web-01.node",
     salt_minion_id: null
   },
@@ -29,8 +32,10 @@ export const BUNDLED_SERVERS = [
     os_family: "Ubuntu 22.04 LTS",
     managed_by: "both",
     is_active: true,
-    health_status: "healthy",
-    last_health_check: "2026-10-06T15:26:46.313Z",
+    health_status: "unknown",
+    health: "unknown",
+    last_health_check: null,
+    last_checked: null,
     chef_node_name: "prod-app-01.node",
     salt_minion_id: "minion-prod-app-01"
   },
@@ -44,8 +49,10 @@ export const BUNDLED_SERVERS = [
     os_family: "Debian 12",
     managed_by: "salt",
     is_active: true,
-    health_status: "healthy",
-    last_health_check: "2026-10-06T15:26:46.100Z",
+    health_status: "unknown",
+    health: "unknown",
+    last_health_check: null,
+    last_checked: null,
     chef_node_name: null,
     salt_minion_id: "minion-prod-db-01"
   },
@@ -59,8 +66,10 @@ export const BUNDLED_SERVERS = [
     os_family: "Ubuntu 22.04 LTS",
     managed_by: "salt",
     is_active: true,
-    health_status: "healthy",
-    last_health_check: "2026-10-06T15:26:46.313Z",
+    health_status: "unknown",
+    health: "unknown",
+    last_health_check: null,
+    last_checked: null,
     chef_node_name: null,
     salt_minion_id: "minion-prod-mon-01"
   },
@@ -74,8 +83,10 @@ export const BUNDLED_SERVERS = [
     os_family: "Ubuntu 22.04 LTS",
     managed_by: "both",
     is_active: true,
-    health_status: "degraded",
-    last_health_check: "2026-10-06T15:21:46.000Z",
+    health_status: "unknown",
+    health: "unknown",
+    last_health_check: null,
+    last_checked: null,
     chef_node_name: "stg-app-01.node",
     salt_minion_id: "minion-stg-app-01"
   },
@@ -89,8 +100,10 @@ export const BUNDLED_SERVERS = [
     os_family: "Debian 12 / Docker",
     managed_by: "both",
     is_active: true,
-    health_status: "healthy",
-    last_health_check: "2026-10-06T15:26:44.494Z",
+    health_status: "unknown",
+    health: "unknown",
+    last_health_check: null,
+    last_checked: null,
     chef_node_name: "local-dev.node",
     salt_minion_id: "local-dev-minion"
   }
@@ -108,11 +121,12 @@ export function normalizeServer(s) {
       managed_by: 'both',
       os: '—',
       os_family: '—',
-      health: 'healthy',
-      health_status: 'healthy',
-      last_health_check: new Date().toISOString(),
-      last_checked: new Date().toISOString(),
-      is_active: true
+      health: 'unknown',
+      health_status: 'unknown',
+      last_health_check: null,
+      last_checked: null,
+      is_active: true,
+      history: []
     };
   }
 
@@ -123,12 +137,15 @@ export function normalizeServer(s) {
   else if (rawManaged === 'salt') managed_by = 'salt';
 
   // Normalize health status
-  const rawHealth = (s.health_status || s.health || 'healthy').toLowerCase().trim();
-  const health_status = rawHealth === 'ok' || rawHealth === 'pass' ? 'healthy' : rawHealth;
+  const rawHealth = (s.health_status || s.health || 'unknown').toLowerCase().trim();
+  let health_status = 'unknown';
+  if (rawHealth === 'ok' || rawHealth === 'pass' || rawHealth === 'healthy') health_status = 'healthy';
+  else if (rawHealth === 'degraded' || rawHealth === 'warn' || rawHealth === 'warning') health_status = 'degraded';
+  else if (rawHealth === 'unhealthy' || rawHealth === 'fail' || rawHealth === 'failed' || rawHealth === 'critical') health_status = 'unhealthy';
 
   // Resolve ISO date string safely
-  let last_checked = s.last_health_check || s.last_checked || s.checked_at;
-  if (!last_checked || last_checked === 'Just now' || typeof last_checked !== 'string') {
+  let last_checked = s.last_checked || s.last_health_check || s.checked_at || null;
+  if (last_checked === 'Just now') {
     last_checked = new Date().toISOString();
   }
 
@@ -153,6 +170,8 @@ export function normalizeServer(s) {
     last_checked: last_checked,
     is_active: s.is_active !== undefined ? Boolean(s.is_active) : true,
     chef_node_name: s.chef_node_name || null,
-    salt_minion_id: s.salt_minion_id || null
+    salt_minion_id: s.salt_minion_id || null,
+    failing_check: s.failing_check || null,
+    history: Array.isArray(s.history) ? s.history : []
   };
 }

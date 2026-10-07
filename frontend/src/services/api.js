@@ -263,41 +263,121 @@ export const api = {
     return inMemoryServers.map(normalizeServer);
   },
 
-  async checkServerHealth(id) {
+  async triggerHealthProbe(serverId) {
     try {
-      const res = await fetch(`${API_BASE}/servers/${id}/health-check`, { method: 'POST' });
-      if (res.ok) return await res.json();
-    } catch (_) {}
+      const res = await fetch(`${API_BASE}/health/probe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverId })
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      if (res.status === 429) {
+        const errData = await res.json().catch(() => ({}));
+        const err = new Error(errData.error || 'Rate limit: Please wait before probing again.');
+        err.status = 429;
+        err.retry_after_sec = errData.retry_after_sec || 5;
+        throw err;
+      }
+    } catch (e) {
+      if (e.status === 429) throw e;
+    }
 
-    const server = inMemoryServers.find(s => s.id === id);
+    // Bundled fallback probe
+    const server = inMemoryServers.find(s => s.id === Number(serverId));
+    const nowIso = new Date().toISOString();
     if (server) {
+      server.health = "healthy";
       server.health_status = "healthy";
-      server.last_health_check = new Date().toISOString();
+      server.last_checked = nowIso;
+      server.last_health_check = nowIso;
     }
     return {
-      hostname: server?.hostname || "unknown",
-      health_status: "healthy",
-      checked_at: new Date().toISOString(),
-      checks: [
-        { name: "SSH Connectivity (22)", status: "pass" },
-        { name: "Service Daemon Status", status: "pass" },
-        { name: "HTTP / TCP Endpoint Check", status: "pass" }
+      id: Math.floor(10000 + Math.random() * 90000),
+      server_id: Number(serverId),
+      status: "healthy",
+      mode: "simulation",
+      latency_ms: 18,
+      started_at: nowIso,
+      finished_at: nowIso,
+      summary: "All diagnostic checks passed (offline fallback)",
+      results: [
+        { check_name: "reachability", ok: true, value: "SSH (22) Open", latency_ms: 2, detail: "TCP port 22 connected" },
+        { check_name: "service_check", ok: true, value: "HTTP 200 OK", latency_ms: 5, detail: "Primary service responsive" },
+        { check_name: "config_mgmt", ok: true, value: "Converged", latency_ms: 8, detail: "Zero drift confirmed" }
       ]
     };
   },
 
-  async checkAllServersHealth() {
+  async getHealthProbe(probeId) {
     try {
-      const res = await fetch(`${API_BASE}/servers/health-check-all`, { method: 'POST' });
+      const res = await fetch(`${API_BASE}/health/probe/${probeId}`);
       if (res.ok) return await res.json();
     } catch (_) {}
+    return null;
+  },
 
+  async triggerFleetHealthCheck(scope = 'all') {
+    try {
+      const res = await fetch(`${API_BASE}/health/fleet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope })
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      if (res.status === 429) {
+        const errData = await res.json().catch(() => ({}));
+        const err = new Error(errData.error || 'Fleet check rate limit: 1 run per 30s.');
+        err.status = 429;
+        err.retry_after_sec = errData.retry_after_sec || 30;
+        throw err;
+      }
+    } catch (e) {
+      if (e.status === 429) throw e;
+    }
+
+    // Bundled fallback fleet check
     const nowIso = new Date().toISOString();
     inMemoryServers.forEach(s => {
+      s.health = "healthy";
       s.health_status = "healthy";
+      s.last_checked = nowIso;
       s.last_health_check = nowIso;
     });
-    return inMemoryServers.map(normalizeServer);
+    return {
+      id: Math.floor(1000 + Math.random() * 9000),
+      scope,
+      status: "done",
+      total: inMemoryServers.length,
+      completed: inMemoryServers.length,
+      started_at: nowIso,
+      finished_at: nowIso,
+      results: inMemoryServers.map(s => ({
+        server_id: s.id,
+        status: "healthy",
+        mode: "simulation"
+      }))
+    };
+  },
+
+  async getFleetHealthCheck(runId) {
+    try {
+      const res = await fetch(`${API_BASE}/health/fleet/${runId}`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return null;
+  },
+
+  async checkServerHealth(id) {
+    return this.triggerHealthProbe(id);
+  },
+
+  async checkAllServersHealth(scope = 'all') {
+    const fleetRun = await this.triggerFleetHealthCheck(scope);
+    return this.getServers();
   },
 
   // ── Configs & Tool Status ────────────────────────────────

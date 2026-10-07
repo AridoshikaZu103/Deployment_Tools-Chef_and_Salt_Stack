@@ -37,10 +37,17 @@ class Server(Base):
     health_status: Mapped[str] = mapped_column(
         String(20), default="unknown"
     )  # healthy | degraded | unhealthy | unknown
+    health: Mapped[str] = mapped_column(
+        String(20), default="unknown"
+    )
     last_health_check: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    last_checked: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     health_details: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    checks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON list of applicable checks
 
     # ── Chef metadata ────────────────────────────────────
     chef_node_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
