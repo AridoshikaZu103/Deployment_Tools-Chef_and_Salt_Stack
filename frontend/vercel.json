@@ -1,7 +1,39 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/deployments/:id/execute",
+      "destination": "/api/deployments?id=:id&action=execute"
+    },
+    {
+      "source": "/api/deployments/:id/confirm",
+      "destination": "/api/deployments?id=:id&action=execute"
+    },
+    {
+      "source": "/api/deployments/:id/complete",
+      "destination": "/api/deployments?id=:id&action=complete"
+    },
+    {
+      "source": "/api/deployments/:id/cancel",
+      "destination": "/api/deployments?id=:id&action=cancel"
+    },
+    {
+      "source": "/api/deployments/:id",
+      "destination": "/api/deployments?id=:id"
+    },
+    {
+      "source": "/api/servers/health/all",
+      "destination": "/api/servers?action=health_all"
+    },
+    {
+      "source": "/api/servers/:id/health",
+      "destination": "/api/servers?id=:id&action=health"
+    },
+    {
+      "source": "/api/servers/:id",
+      "destination": "/api/servers?id=:id"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

@@ -1,9 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, Bot, Volume2, ShieldCheck, Play, Eye, AlertTriangle, Mic, Terminal } from 'lucide-react';
 import { FormattedAiMessage } from '../FormattedAiMessage';
 
 export function AIMessage({ message, onSpeak, isSpeaking, onConfirmPlan, onReviewPlan }) {
+  const [prodConfirmedOnce, setProdConfirmedOnce] = useState(false);
   const isUser = message.sender === 'user';
+  const isProd = (message.plan?.environment || '').toLowerCase() === 'production';
+
+  const handleConfirmClick = () => {
+    if (isProd && !prodConfirmedOnce) {
+      setProdConfirmedOnce(true);
+      return;
+    }
+    if (onConfirmPlan) {
+      onConfirmPlan(message.plan);
+    }
+  };
 
   if (isUser) {
     return (
@@ -113,11 +125,21 @@ export function AIMessage({ message, onSpeak, isSpeaking, onConfirmPlan, onRevie
             <div className="flex items-center gap-2 pt-1">
               {onConfirmPlan && (
                 <button
-                  onClick={() => onConfirmPlan(message.plan)}
-                  className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-cyan-500 hover:opacity-95 text-white font-mono text-xs font-extrabold shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                  onClick={handleConfirmClick}
+                  className={`flex-1 py-2 px-3 rounded-xl font-mono text-xs font-extrabold shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${
+                    isProd && prodConfirmedOnce
+                      ? 'bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:opacity-95 text-white border border-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.4)] animate-pulse'
+                      : 'bg-gradient-to-r from-orange-500 via-amber-500 to-cyan-500 hover:opacity-95 text-white'
+                  }`}
                 >
                   <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>Confirm & Deploy</span>
+                  <span>
+                    {isProd && prodConfirmedOnce
+                      ? 'Confirm Production Execution (High Impact)'
+                      : isProd
+                      ? 'Review & Confirm (Prod)'
+                      : 'Confirm & Deploy'}
+                  </span>
                 </button>
               )}
 

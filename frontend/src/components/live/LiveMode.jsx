@@ -64,6 +64,7 @@ export function LiveMode({
   servers = [],
   deployments = [],
   activeEnv = 'all',
+  aiBadgeStatus = 'Live: Gemini 3.8 Flash',
   onSwitchToChat
 }) {
   const bars = [8, 14, 22, 16, 28, 20, 32, 18, 26, 36, 24, 40, 28, 34, 22, 38, 20, 30, 16, 26, 12, 22, 14, 8];
@@ -190,6 +191,24 @@ export function LiveMode({
               {voiceState}
             </span>
           </div>
+
+          <span className="text-white/20 hidden md:inline">|</span>
+
+          {/* AI Badge Pill */}
+          <span
+            className={`hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border font-mono ${
+              aiBadgeStatus.startsWith('Live')
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                aiBadgeStatus.startsWith('Live') ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+              }`}
+            />
+            <span>{aiBadgeStatus}</span>
+          </span>
         </div>
 
         {/* Right: Managed Fleet Telemetry & Session Controls */}
@@ -470,7 +489,7 @@ export function LiveMode({
           </div>
 
           {/* 50/50 Chef vs SaltStack Real-time Telemetry Meters */}
-          <LiveMetrics />
+          <LiveMetrics servers={servers} deployments={deployments} />
 
           {/* Live Streaming Terminal Log Ticker */}
           <div className="p-3 rounded-xl bg-[#03060d] border border-white/[0.08] font-mono text-xs space-y-1.5">

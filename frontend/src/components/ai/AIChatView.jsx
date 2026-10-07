@@ -17,13 +17,16 @@ export function AIChatView({
   onStopListening,
   onConfirmPlan,
   onReviewPlan,
-  serversCount = 5
+  aiBadgeStatus = 'Live: Gemini 3.8 Flash',
+  serversCount = 6
 }) {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  const isLive = aiBadgeStatus.startsWith('Live');
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#05070d] overflow-hidden select-none">
@@ -35,10 +38,26 @@ export function AIChatView({
           <span className="text-slate-600">|</span>
           <span>Chef & SaltStack Synchronized</span>
         </div>
-        <span className="text-cyan-400/90 flex items-center gap-1">
-          <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-          <span>Real-time Telemetry</span>
-        </span>
+        <div className="flex items-center gap-2.5">
+          <span
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 border ${
+              isLive
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isLive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+              }`}
+            />
+            <span>{aiBadgeStatus}</span>
+          </span>
+          <span className="text-cyan-400/90 hidden sm:flex items-center gap-1">
+            <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
+            <span>Real-time</span>
+          </span>
+        </div>
       </div>
 
       {/* Speaking Soundwave Indicator */}

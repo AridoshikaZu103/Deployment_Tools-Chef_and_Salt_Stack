@@ -4,11 +4,13 @@ import {
   getStaticCookbookContent,
   getStaticSaltStateContent
 } from '../data/cookbooksData';
+import { BUNDLED_SERVERS, normalizeServer } from '../data/serversData';
+import { BUNDLED_DEPLOYMENTS, normalizeDeployment } from '../data/deploymentsData';
 
 /**
- * API Service for interacting with FastAPI Backend.
- * Includes graceful mock fallbacks and bundled static data so the UI remains 100%
- * interactive even without a backend or when deployed statically on Vercel.
+ * API Service for interacting with Backend & Vercel Serverless Functions.
+ * Uses bundled static datasets as the single source of truth when running
+ * in standalone/static mode or on Vercel without a dedicated backend.
  */
 
 const RAW_API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
@@ -16,205 +18,110 @@ const API_BASE = RAW_API_BASE.replace(/\/+$/, '');
 
 let isFallbackActive = false;
 
-// Initial Mock Data
-let mockDeployments = [
-  {
-    id: 101,
-    name: "Deploy Full Production Stack",
-    description: "Orchestrate Nginx reverse proxy + FastAPI cluster + PostgreSQL + Prometheus",
-    environment: "production",
-    tool: "both",
-    target_hosts: "web-01, app-01, app-02, db-01, mon-01",
-    status: "success",
-    progress: 100,
-    created_by: 1,
-    chef_runlist: "recipe[nginx::default], recipe[app_server::default]",
-    salt_states: "common, postgresql, monitoring",
-    started_at: "2026-10-06T06:15:00Z",
-    completed_at: "2026-10-06T06:18:24Z",
-    created_at: "2026-10-06T06:14:30Z",
-    log_output: `[Chef Client] Starting run at 2026-10-06 06:15:02 UTC
-[Chef] Resolving cookbooks: nginx (1.0.0), app_server (1.0.0)
-[Chef] Recipe: nginx::default
-  * package[nginx] action install (up to date)
-  * template[/etc/nginx/sites-available/app_proxy.conf] action create (updated)
-  * service[nginx] action reload (reloaded)
-[Salt Stack] Applying highstate to minions: db-01, mon-01
-----------
-          ID: postgresql_packages
-    Function: pkg.installed
-      Result: True (packages already present)
-----------
-          ID: create_database
-    Function: cmd.run
-      Result: True (database 'deployment_tools' verified)
-----------
-          ID: prometheus_service
-    Function: service.running
-      Result: True (running on port 9090)
-Summary for minions: 2
-Succeeded: 14 (changed=2)
-Failed: 0
-✓ Full stack deployment completed in 204 seconds.`
-  },
-  {
-    id: 102,
-    name: "Rollout Nginx Security & TLS Patch",
-    description: "Update Nginx configuration and reload workers without downtime",
-    environment: "staging",
-    tool: "chef",
-    target_hosts: "staging-web-01",
-    status: "running",
-    progress: 68,
-    created_by: 1,
-    chef_runlist: "recipe[nginx::default]",
-    salt_states: null,
-    started_at: "2026-10-06T07:10:12Z",
-    completed_at: null,
-    created_at: "2026-10-06T07:09:40Z",
-    log_output: `[Chef Client] Syncing cookbooks...
-[Chef] Validating syntax for recipe[nginx::default]... OK
-[Chef] Rendering template /etc/nginx/nginx.conf with worker_processes=auto
-[Chef] Executing nginx -t syntax verification... Syntax OK
-[Chef] Reloading service[nginx]... In progress`
-  },
-  {
-    id: 103,
-    name: "Provision Dev Database & Seeds",
-    description: "Apply PostgreSQL states and initial schema migrations",
-    environment: "development",
-    tool: "salt",
-    target_hosts: "dev-db-01",
-    status: "pending",
-    progress: 0,
-    created_by: 1,
-    chef_runlist: null,
-    salt_states: "common, postgresql",
-    started_at: null,
-    completed_at: null,
-    created_at: "2026-10-06T07:30:00Z",
-    log_output: `[SaltStack] Minion connected: dev-db-01 (Ubuntu 22.04 LTS)
-[SaltStack] Syncing state formulas: common, postgresql...
-[SaltStack] Pillar compilation verified for env: development
-Waiting in queue for target minion availability...`
+// In-memory working copies initialized directly from single source of truth
+let inMemoryDeployments = BUNDLED_DEPLOYMENTS.map(normalizeDeployment);
+let inMemoryServers = BUNDLED_SERVERS.map(normalizeServer);
+
+/**
+ * Intelligent local fallback generator for Nova AI copilot when offline.
+ * Answers with actual cluster telemetry, cookbooks, and states instead of generic echoes.
+ */
+export function generateOfflineResponse(prompt, context = {}) {
+  const p = (prompt || '').toLowerCase().trim();
+  const serversList = context.servers || inMemoryServers;
+
+  // Plan generation for Nginx / Web server
+  if (p.includes('nginx') || p.includes('reverse proxy') || (p.includes('deploy') && p.includes('web'))) {
+    return {
+      stage: 'Plan',
+      speech: 'I generated a deployment plan for Nginx reverse proxy using Chef cookbook and Salt state.',
+      text: `**[Nova-Orchestrator - SRE Copilot] (Offline mode)**\n\nI have generated an infrastructure deployment plan to converge **Nginx** across web nodes:\n\n- **Target Node**: \`prod-web-01\` (Ubuntu 22.04 LTS)\n- **Chef Cookbook**: \`recipe[nginx::default]\` (v1.0.0, 70 lines)\n- **Salt State**: \`nginx.sls\` (package install, vhost config, service reload)\n\nPlease review the plan details below and confirm to trigger rollout.`,
+      plan: {
+        name: 'Deploy Nginx Reverse Proxy & TLS',
+        description: 'Converge Nginx web server using Chef recipe and Salt state on web tier',
+        environment: 'production',
+        tool: 'chef',
+        target_hosts: 'prod-web-01',
+        chef_runlist: 'recipe[nginx::default]',
+        salt_states: 'common, nginx'
+      },
+      needs_confirmation: true,
+      isOffline: true
+    };
   }
-];
 
-let mockServers = [
-  {
-    id: 1,
-    hostname: "prod-web-01",
-    ip_address: "192.168.10.11",
-    fqdn: "web01.production.internal",
-    environment: "production",
-    role: "webserver",
-    os_family: "Ubuntu 22.04 LTS",
-    managed_by: "chef",
-    is_active: true,
-    health_status: "healthy",
-    last_health_check: "2 minutes ago",
-    chef_node_name: "prod-web-01.node",
-    salt_minion_id: null
-  },
-  {
-    id: 2,
-    hostname: "prod-app-01",
-    ip_address: "192.168.10.21",
-    fqdn: "app01.production.internal",
-    environment: "production",
-    role: "appserver",
-    os_family: "Ubuntu 22.04 LTS",
-    managed_by: "both",
-    is_active: true,
-    health_status: "healthy",
-    last_health_check: "1 minute ago",
-    chef_node_name: "prod-app-01.node",
-    salt_minion_id: "minion-prod-app-01"
-  },
-  {
-    id: 3,
-    hostname: "prod-db-01",
-    ip_address: "192.168.10.31",
-    fqdn: "db01.production.internal",
-    environment: "production",
-    role: "database",
-    os_family: "Debian 12",
-    managed_by: "salt",
-    is_active: true,
-    health_status: "healthy",
-    last_health_check: "3 minutes ago",
-    chef_node_name: null,
-    salt_minion_id: "minion-prod-db-01"
-  },
-  {
-    id: 4,
-    hostname: "prod-mon-01",
-    ip_address: "192.168.10.41",
-    fqdn: "mon01.production.internal",
-    environment: "production",
-    role: "monitoring",
-    os_family: "Ubuntu 22.04 LTS",
-    managed_by: "salt",
-    is_active: true,
-    health_status: "healthy",
-    last_health_check: "Just now",
-    chef_node_name: null,
-    salt_minion_id: "minion-prod-mon-01"
-  },
-  {
-    id: 5,
-    hostname: "stg-app-01",
-    ip_address: "192.168.20.21",
-    fqdn: "app01.staging.internal",
-    environment: "staging",
-    role: "appserver",
-    os_family: "Ubuntu 22.04 LTS",
-    managed_by: "both",
-    is_active: true,
-    health_status: "degraded",
-    last_health_check: "5 minutes ago",
-    chef_node_name: "stg-app-01.node",
-    salt_minion_id: "minion-stg-app-01"
-  },
-  {
-    id: 6,
-    hostname: "dev-all-in-one",
-    ip_address: "127.0.0.1",
-    fqdn: "dev-box.local",
-    environment: "development",
-    role: "appserver",
-    os_family: "Debian 12 / Docker",
-    managed_by: "both",
-    is_active: true,
-    health_status: "healthy",
-    last_health_check: "Just now",
-    chef_node_name: "local-dev.node",
-    salt_minion_id: "local-dev-minion"
+  // Plan generation for App Server / FastAPI
+  if (p.includes('app') || p.includes('fastapi') || (p.includes('deploy') && p.includes('server'))) {
+    return {
+      stage: 'Plan',
+      speech: 'Created a deployment plan for FastAPI app server across application nodes.',
+      text: `**[Nova-Orchestrator - SRE Copilot] (Offline mode)**\n\nGenerated rollout plan for **FastAPI Application Server**:\n\n- **Target Nodes**: \`prod-app-01\`, \`stg-app-01\`\n- **Chef Recipe**: \`recipe[app_server::default]\` (systemd unit, venv, uvicorn workers)\n- **Salt State**: \`app_server.sls\`\n\nReady for execution upon your confirmation.`,
+      plan: {
+        name: 'Deploy FastAPI App Server Cluster',
+        description: 'Orchestrate Python virtualenv, systemd service, and application sockets',
+        environment: 'production',
+        tool: 'both',
+        target_hosts: 'prod-app-01, stg-app-01',
+        chef_runlist: 'recipe[app_server::default]',
+        salt_states: 'common, app_server'
+      },
+      needs_confirmation: true,
+      isOffline: true
+    };
   }
-];
 
-export function normalizeDeployment(d) {
-  if (!d) return d;
-  const rawStatus = (d.status || 'pending').toLowerCase();
-  const normalizedStatus = rawStatus === 'succeeded' ? 'success' : rawStatus;
-  const progressVal = typeof d.progress === 'number'
-    ? d.progress
-    : (normalizedStatus === 'success' ? 100 : (normalizedStatus === 'running' ? 45 : 0));
+  // Fleet diagnostics / Status inquiry
+  if (p.includes('server') || p.includes('node') || p.includes('cluster') || p.includes('health') || p.includes('fleet') || p.includes('status')) {
+    const total = serversList.length;
+    const healthy = serversList.filter(s => (s.health_status || s.health) === 'healthy').length;
+    const nodesSummary = serversList
+      .map(s => `- \`${s.hostname}\` (${s.environment}) — Role: **${s.role}**, OS: **${s.os_family}**, Engine: **${s.managed_by}**`)
+      .join('\n');
 
+    return {
+      stage: 'Help',
+      speech: `All ${total} cluster nodes are monitored. ${healthy} are healthy.`,
+      text: `**[Nova-Orchestrator - Fleet Diagnostics] (Offline mode)**\n\n**Cluster Telemetry Overview**:\n- **Monitored Nodes**: ${total} active nodes (${healthy} healthy)\n- **Dual-Engine Status**: Chef Client (Pull) & SaltStack Minions (Push)\n\n**Node Inventory**:\n${nodesSummary}\n\nYou can probe TCP sockets anytime from the **Servers & Health** page.`,
+      plan: null,
+      needs_confirmation: false,
+      isOffline: true
+    };
+  }
+
+  // Chef cookbooks inquiry
+  if (p.includes('chef') || p.includes('cookbook') || p.includes('recipe')) {
+    const cbList = STATIC_CHEF_COOKBOOKS.map(cb => `- **${cb.name}** (v${cb.version}): ${cb.description}`).join('\n');
+    return {
+      stage: 'Help',
+      speech: `There are 4 bundled Chef cookbooks: app server, monitoring, nginx, and postgresql.`,
+      text: `**[Nova-Orchestrator - Chef Cookbooks] (Offline mode)**\n\nBundled Chef Cookbooks with complete Ruby recipe files:\n\n${cbList}\n\nYou can view full source code in the **Cookbooks & States** tab.`,
+      plan: null,
+      needs_confirmation: false,
+      isOffline: true
+    };
+  }
+
+  // SaltStack states inquiry
+  if (p.includes('salt') || p.includes('sls') || p.includes('state') || p.includes('pillar') || p.includes('grain')) {
+    const stList = STATIC_SALT_STATES.map(st => `- **${st.filename}**: ${st.description}`).join('\n');
+    return {
+      stage: 'Help',
+      speech: `SaltStack state formulas include top, common, app server, nginx, postgresql, and monitoring.`,
+      text: `**[Nova-Orchestrator - SaltStack States] (Offline mode)**\n\nBundled Salt formulas and highstate definitions:\n\n${stList}\n\n- **ZeroMQ Push Architecture**: Ports 4505/4506\n- **Grains**: Hardware & OS matching\n- **Pillars**: Secure configuration tree`,
+      plan: null,
+      needs_confirmation: false,
+      isOffline: true
+    };
+  }
+
+  // Greeting or general query
   return {
-    ...d,
-    id: Number(d.id),
-    name: d.name || `Deployment #${d.id}`,
-    description: d.description || '',
-    environment: (d.environment || 'production').toLowerCase(),
-    tool: (d.tool || d.engine || 'both').toLowerCase(),
-    status: normalizedStatus,
-    progress: progressVal,
-    target_hosts: d.target_hosts || (Array.isArray(d.targets) ? d.targets.join(', ') : 'web-01'),
-    log_output: d.log_output || '',
-    started_at: d.started_at || null,
-    completed_at: d.completed_at || null,
-    created_at: d.created_at || new Date().toISOString(),
+    stage: 'Help',
+    speech: 'Hello, I am Nova-Orchestrator. I can help deploy infrastructure or explain Chef and Salt configurations.',
+    text: `**[Nova-Orchestrator - SRE Copilot] (Offline mode)**\n\nI am your Autonomous Fleet SRE Copilot running in bundled offline mode.\n\n- **Fleet Inventory**: ${serversList.length} nodes active across Production, Staging, and Dev.\n- **Orchestration**: Chef Client (Ruby / Pull) & SaltStack (YAML / Push).\n\nAsk me to *"Deploy Nginx using Chef"*, *"Check cluster health"*, or ask about any cookbook or state formula.`,
+    plan: null,
+    needs_confirmation: false,
+    isOffline: true
   };
 }
 
@@ -226,10 +133,13 @@ export const api = {
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data) ? data : (data.deployments || []);
-        return list.map(normalizeDeployment);
+        if (list.length > 0) {
+          return list.map(normalizeDeployment);
+        }
       }
     } catch (_) {}
-    return mockDeployments.map(normalizeDeployment);
+    isFallbackActive = true;
+    return inMemoryDeployments.map(normalizeDeployment);
   },
 
   async createDeployment(payload) {
@@ -241,23 +151,25 @@ export const api = {
       });
       if (res.ok) {
         const created = await res.json();
-        return normalizeDeployment(created);
+        const normalized = normalizeDeployment(created);
+        inMemoryDeployments = [normalized, ...inMemoryDeployments];
+        return normalized;
       }
     } catch (_) {}
     
-    // Mock create
+    // Bundled fallback creation
     const newDep = normalizeDeployment({
       id: Math.floor(1000 + Math.random() * 9000),
       ...payload,
       status: "pending",
       progress: 0,
       created_by: 1,
-      log_output: "Deployment queued.",
+      log_output: `[Nova Orchestrator] Deployment queued for target hosts: ${payload.target_hosts || '*'}.\nInitializing dual-engine runner...`,
       started_at: null,
       completed_at: null,
       created_at: new Date().toISOString()
     });
-    mockDeployments = [newDep, ...mockDeployments];
+    inMemoryDeployments = [newDep, ...inMemoryDeployments];
     return newDep;
   },
 
@@ -273,30 +185,16 @@ export const api = {
       }
     } catch (_) {}
 
-    const dep = mockDeployments.find(d => d.id === id);
+    const dep = inMemoryDeployments.find(d => d.id === id);
     if (dep) {
       const toolLabel = dep.tool === 'salt' ? 'SaltStack Engine' : (dep.tool === 'chef' ? 'Chef Engine' : 'Hybrid Orchestration Engine');
       dep.status = "running";
-      dep.progress = 45;
+      dep.progress = 10;
       dep.started_at = new Date().toISOString();
-      dep.log_output += `\n[${new Date().toLocaleTimeString()}] Deployment executed via ${toolLabel}...`;
-      
-      // Simulate completion after 3s
-      setTimeout(() => {
-        dep.status = "success";
-        dep.progress = 100;
-        dep.completed_at = new Date().toISOString();
-        if (dep.tool === 'salt') {
-          dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ All Salt states converged successfully across target minions.`;
-        } else if (dep.tool === 'chef') {
-          dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ All Chef cookbooks converged successfully across target nodes.`;
-        } else {
-          dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ All Chef cookbooks and Salt states converged successfully.`;
-        }
-      }, 3000);
+      dep.log_output = (dep.log_output || '') + `\n[${new Date().toLocaleTimeString()}] Deployment #${id} execution triggered via ${toolLabel}.\n[Orchestrator] Target hosts: ${dep.target_hosts || '*'}. Launching phased convergence runner...`;
       return normalizeDeployment(dep);
     }
-    return normalizeDeployment({ id, status: "running", progress: 45 });
+    return normalizeDeployment({ id, status: "running", progress: 10 });
   },
 
   async cancelDeployment(id) {
@@ -308,7 +206,7 @@ export const api = {
       }
     } catch (_) {}
 
-    const dep = mockDeployments.find(d => d.id === id);
+    const dep = inMemoryDeployments.find(d => d.id === id);
     if (dep) {
       dep.status = "cancelled";
       dep.log_output += `\n[${new Date().toLocaleTimeString()}] Deployment cancelled by operator.`;
@@ -326,18 +224,12 @@ export const api = {
       }
     } catch (_) {}
 
-    const dep = mockDeployments.find(d => d.id === id);
+    const dep = inMemoryDeployments.find(d => d.id === id);
     if (dep) {
       dep.status = "success";
       dep.progress = 100;
       dep.completed_at = new Date().toISOString();
-      if (dep.tool === 'salt') {
-        dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ Salt state convergence completed by operator.`;
-      } else if (dep.tool === 'chef') {
-        dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ Chef recipe convergence completed by operator.`;
-      } else {
-        dep.log_output += `\n[${new Date().toLocaleTimeString()}] ✓ Convergence completed by operator.`;
-      }
+      dep.log_output += `\n[${new Date().toLocaleTimeString()}] Convergence completed by operator.`;
       return normalizeDeployment(dep);
     }
     return normalizeDeployment({ id, status: "success", progress: 100 });
@@ -347,12 +239,12 @@ export const api = {
     try {
       const res = await fetch(`${API_BASE}/deployments/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        mockDeployments = mockDeployments.filter(d => d.id !== id);
+        inMemoryDeployments = inMemoryDeployments.filter(d => d.id !== id);
         return { success: true };
       }
     } catch (_) {}
 
-    mockDeployments = mockDeployments.filter(d => d.id !== id);
+    inMemoryDeployments = inMemoryDeployments.filter(d => d.id !== id);
     return { success: true };
   },
 
@@ -360,9 +252,15 @@ export const api = {
   async getServers() {
     try {
       const res = await fetch(`${API_BASE}/servers/`);
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data.map(normalizeServer);
+        }
+      }
     } catch (_) {}
-    return mockServers;
+    isFallbackActive = true;
+    return inMemoryServers.map(normalizeServer);
   },
 
   async checkServerHealth(id) {
@@ -371,10 +269,10 @@ export const api = {
       if (res.ok) return await res.json();
     } catch (_) {}
 
-    const server = mockServers.find(s => s.id === id);
+    const server = inMemoryServers.find(s => s.id === id);
     if (server) {
       server.health_status = "healthy";
-      server.last_health_check = "Just now";
+      server.last_health_check = new Date().toISOString();
     }
     return {
       hostname: server?.hostname || "unknown",
@@ -394,11 +292,12 @@ export const api = {
       if (res.ok) return await res.json();
     } catch (_) {}
 
-    mockServers.forEach(s => {
+    const nowIso = new Date().toISOString();
+    inMemoryServers.forEach(s => {
       s.health_status = "healthy";
-      s.last_health_check = "Just now";
+      s.last_health_check = nowIso;
     });
-    return mockServers;
+    return inMemoryServers.map(normalizeServer);
   },
 
   // ── Configs & Tool Status ────────────────────────────────
@@ -495,22 +394,86 @@ export const api = {
     return fallback;
   },
 
-  // ── AI DevOps Copilot ────────────────────────────────────
-  async askAiAgent(prompt, context = {}) {
+  // ── AI DevOps Copilot (Gemini 3.8 Flash & Health) ────────
+  async checkAiHealth() {
     try {
-      const res = await fetch(`${API_BASE}/ai/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          agent_name: 'Nova-Orchestrator',
-          context
-        })
-      });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch('/api/health', { signal: controller.signal });
+      clearTimeout(timer);
       if (res.ok) {
         return await res.json();
       }
     } catch (_) {}
-    return null;
+    return { ok: false, hasKey: false, model: 'gemini-3.8-flash' };
+  },
+
+  async askAiAgent(prompt, options = {}) {
+    const history = options.history || [];
+    const fleetContext = options.fleetContext || options.context || {};
+    const servers = options.servers || inMemoryServers;
+    const deployments = options.deployments || inMemoryDeployments;
+
+    // 1. Try Vercel Serverless /api/chat route
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 22000);
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          history: history.slice(-10),
+          fleetContext: {
+            nodes: servers.map((s) => ({
+              hostname: s.hostname,
+              role: s.role,
+              environment: s.environment,
+              managed_by: s.managed_by,
+              health: s.health_status
+            })),
+            deployments_count: deployments.length,
+            ...fleetContext
+          }
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          ...data,
+          isLive: true,
+          badgeStatus: 'Live: Gemini 3.8 Flash'
+        };
+      } else {
+        let errData = {};
+        try {
+          errData = await res.json();
+        } catch (_) {}
+        const errorReason = errData.error || `HTTP ${res.status}`;
+        console.warn('[AI Client] /api/chat responded with error:', errorReason);
+        const fallback = generateOfflineResponse(prompt, { servers, deployments });
+        return {
+          ...fallback,
+          isLive: false,
+          badgeStatus: `Offline: ${errorReason}`,
+          errorDetail: errorReason
+        };
+      }
+    } catch (err) {
+      const errorReason = err.name === 'AbortError' ? 'Timeout 20s' : (err.message || 'Offline');
+      console.warn('[AI Client] Network error reaching /api/chat:', errorReason);
+      const fallback = generateOfflineResponse(prompt, { servers, deployments });
+      return {
+        ...fallback,
+        isLive: false,
+        badgeStatus: `Offline: ${errorReason}`,
+        errorDetail: errorReason
+      };
+    }
   }
 };

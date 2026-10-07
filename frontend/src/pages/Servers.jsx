@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
 import { StatusBadge, ToolBadge } from '../components/StatusBadge';
 import { Server, Activity, ShieldCheck, RefreshCw } from 'lucide-react';
+import { normalizeServer, BUNDLED_SERVERS } from '../data/serversData';
+import { formatDate } from '../utils/time';
 
-export function Servers({ servers, onCheckHealth, onCheckAllHealth }) {
+export function Servers({ servers = [], onCheckHealth, onCheckAllHealth }) {
   const [checkingAll, setCheckingAll] = useState(false);
   const [checkingId, setCheckingId] = useState(null);
 
+  const rawList = Array.isArray(servers) && servers.length > 0 ? servers : BUNDLED_SERVERS;
+  const safeServers = rawList.map(normalizeServer);
+
   const handleCheckAll = async () => {
     setCheckingAll(true);
-    await onCheckAllHealth();
+    if (onCheckAllHealth) await onCheckAllHealth();
     setCheckingAll(false);
   };
 
   const handleCheckSingle = async (id) => {
     setCheckingId(id);
-    await onCheckHealth(id);
+    if (onCheckHealth) await onCheckHealth(id);
     setCheckingId(null);
   };
 
@@ -45,7 +50,7 @@ export function Servers({ servers, onCheckHealth, onCheckAllHealth }) {
 
       {/* Mobile Server Cards View (< md) */}
       <div className="md:hidden space-y-3">
-        {servers.map((server) => (
+        {safeServers.map((server) => (
           <div
             key={server.id}
             className="card-cyber rounded-2xl p-4 border border-white/[0.08] space-y-3 shadow-card"
@@ -61,19 +66,19 @@ export function Servers({ servers, onCheckHealth, onCheckAllHealth }) {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <span className="text-[10px] text-slate-500 uppercase block font-bold">IP Address</span>
-                <span className="font-mono text-slate-300">{server.ip_address}</span>
+                <span className="font-mono text-slate-300">{server.ip_address || '—'}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 uppercase block font-bold">Role</span>
-                <span className="font-mono text-slate-300 uppercase">{server.role}</span>
+                <span className="font-mono text-slate-300 uppercase">{server.role || '—'}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 uppercase block font-bold">Environment</span>
-                <span className="capitalize text-slate-300">{server.environment}</span>
+                <span className="capitalize text-slate-300">{server.environment || '—'}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 uppercase block font-bold">OS Family</span>
-                <span className="text-slate-400">{server.os_family}</span>
+                <span className="text-slate-400">{server.os_family || '—'}</span>
               </div>
             </div>
 
@@ -109,34 +114,34 @@ export function Servers({ servers, onCheckHealth, onCheckAllHealth }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.05] text-xs">
-              {servers.map((server) => (
+              {safeServers.map((server) => (
                 <tr key={server.id} className="hover:bg-white/[0.02] transition">
                   <td className="py-3.5 px-4 font-extrabold text-white flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_6px_#06b6d4]" />
-                    <span className="font-mono">{server.hostname}</span>
+                    <span className="font-mono">{server.hostname || '—'}</span>
                   </td>
                   <td className="py-3.5 px-4 font-mono text-slate-300 font-medium">
-                    {server.ip_address}
+                    {server.ip_address || '—'}
                   </td>
                   <td className="py-3.5 px-4">
                     <span className="px-2.5 py-0.5 rounded-md bg-white/[0.05] border border-white/[0.08] font-bold text-slate-300 text-[11px] uppercase font-mono">
-                      {server.role}
+                      {server.role || '—'}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 capitalize text-slate-300 font-medium">
-                    {server.environment}
+                    {server.environment || '—'}
                   </td>
                   <td className="py-3.5 px-4">
                     <ToolBadge tool={server.managed_by} />
                   </td>
                   <td className="py-3.5 px-4 text-slate-400 font-normal">
-                    {server.os_family}
+                    {server.os_family || '—'}
                   </td>
                   <td className="py-3.5 px-4">
                     <div className="space-y-0.5">
                       <StatusBadge status={server.health_status} />
                       <div className="text-[10px] text-slate-500 font-mono">
-                        {server.last_health_check ? new Date(server.last_health_check).toLocaleTimeString() : 'Verified'}
+                        {formatDate(server.last_health_check)}
                       </div>
                     </div>
                   </td>

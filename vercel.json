@@ -1,52 +1,43 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
-    "frontend": {
-      "root": "frontend",
-      "framework": "vite"
-    },
-    "backend": {
-      "root": "backend",
-      "framework": "fastapi",
-      "entrypoint": "main:app"
-    }
-  },
+  "buildCommand": "npm --prefix frontend run build",
+  "outputDirectory": "frontend/dist",
+  "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": {
-        "service": "backend"
-      }
+      "source": "/api/deployments/:id/execute",
+      "destination": "/api/deployments?id=:id&action=execute"
     },
     {
-      "source": "/api",
-      "destination": {
-        "service": "backend"
-      }
+      "source": "/api/deployments/:id/confirm",
+      "destination": "/api/deployments?id=:id&action=execute"
     },
     {
-      "source": "/health",
-      "destination": {
-        "service": "backend"
-      }
+      "source": "/api/deployments/:id/complete",
+      "destination": "/api/deployments?id=:id&action=complete"
     },
     {
-      "source": "/docs",
-      "destination": {
-        "service": "backend"
-      }
+      "source": "/api/deployments/:id/cancel",
+      "destination": "/api/deployments?id=:id&action=cancel"
     },
     {
-      "source": "/openapi.json",
-      "destination": {
-        "service": "backend"
-      }
+      "source": "/api/deployments/:id",
+      "destination": "/api/deployments?id=:id"
     },
     {
-      "source": "/(.*)",
-      "destination": {
-        "service": "frontend"
-      }
+      "source": "/api/servers/health/all",
+      "destination": "/api/servers?action=health_all"
+    },
+    {
+      "source": "/api/servers/:id/health",
+      "destination": "/api/servers?id=:id&action=health"
+    },
+    {
+      "source": "/api/servers/:id",
+      "destination": "/api/servers?id=:id"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }

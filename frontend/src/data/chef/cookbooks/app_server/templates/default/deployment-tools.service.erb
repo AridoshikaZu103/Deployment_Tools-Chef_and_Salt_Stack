@@ -1,0 +1,19 @@
+[Unit]
+Description=Deployment Tools FastAPI Application Server
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=<%= @user %>
+Group=<%= @user %>
+WorkingDirectory=<%= @app_dir %>/backend
+Environment="PATH=<%= @venv_dir %>/bin:/usr/local/bin:/usr/bin"
+EnvironmentFile=-<%= @app_dir %>/backend/.env
+ExecStart=<%= @venv_dir %>/bin/uvicorn app.main:app --host <%= @host %> --port <%= @port %> --workers <%= @workers %>
+Restart=always
+RestartSec=5
+StandardOutput=append:<%= @app_dir %>/logs/app.log
+StandardError=append:<%= @app_dir %>/logs/error.log
+
+[Install]
+WantedBy=multi-user.target

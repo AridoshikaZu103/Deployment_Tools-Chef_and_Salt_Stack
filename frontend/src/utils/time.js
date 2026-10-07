@@ -134,3 +134,27 @@ export function formatFullDateTime(dateInput) {
     timeStyle: 'medium',
   });
 }
+
+/**
+ * Safe date formatter returning "Unknown" when date is invalid or missing.
+ * Prevents "Invalid Date" errors in UI.
+ */
+export function formatDate(dateInput) {
+  if (!dateInput) return 'Unknown';
+  if (typeof dateInput === 'string' && (dateInput.toLowerCase() === 'just now' || dateInput.includes('ago'))) {
+    return dateInput;
+  }
+  const date = parseDate(dateInput);
+  if (!date || isNaN(date.getTime())) return 'Unknown';
+  try {
+    return date.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (_) {
+    return 'Unknown';
+  }
+}
+

@@ -1,0 +1,15 @@
+[Unit]
+Description=Deployment Tools FastAPI Application Server (Salt Managed)
+After=network.target
+
+[Service]
+Type=simple
+User={{ user }}
+Group={{ user }}
+WorkingDirectory={{ app_dir }}/backend
+ExecStart={{ venv_dir }}/bin/uvicorn app.main:app --host {{ host }} --port {{ port }} --workers {{ workers }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

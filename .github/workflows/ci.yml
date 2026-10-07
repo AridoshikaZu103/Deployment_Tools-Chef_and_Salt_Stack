@@ -106,7 +106,7 @@ jobs:
           import json
           with open('vercel.json', 'r') as fp:
               cfg = json.load(fp)
-          assert ('services' in cfg or 'builds' in cfg), 'Missing services/builds in vercel.json'
+          assert ('services' in cfg or 'builds' in cfg or 'rewrites' in cfg or 'buildCommand' in cfg), 'Missing services, builds, rewrites, or buildCommand in vercel.json'
           print('[CI OK] vercel.json syntax validated')
           "
 

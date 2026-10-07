@@ -115,33 +115,45 @@ export default function App() {
           const host = dep.target_hosts || 'target-node';
 
           if (tool === 'salt') {
-            if (nextProgress >= 74 && nextProgress < 82) {
-              logLine = `\n[SaltStack Minion] Syncing state formulas (SLS) and pillar data to minion: ${host}...`;
-            } else if (nextProgress >= 82 && nextProgress < 90) {
-              logLine = `\n[SaltStack Minion] Executing state.apply on minion [${host}]... OK`;
-            } else if (nextProgress >= 90 && nextProgress < 100) {
-              logLine = `\n[SaltStack Minion] Grains verification & compliance check on ${host}... Passed (0 errors)`;
+            if (nextProgress >= 15 && nextProgress < 30) {
+              logLine = `\n[ZeroMQ] Connected to PUB port 4505 and RET port 4506. Probing minions: ${host}... OK`;
+            } else if (nextProgress >= 30 && nextProgress < 50) {
+              logLine = `\n[SaltStack] Synchronizing state formulas (top.sls, common.sls, app_server.sls, nginx.sls, postgresql.sls, monitoring.sls)... OK`;
+            } else if (nextProgress >= 50 && nextProgress < 70) {
+              logLine = `\n[SaltStack] Compiling highstate graph for minions [${host}]. Grains match: Ubuntu/Debian. Pillar compilation OK`;
+            } else if (nextProgress >= 70 && nextProgress < 85) {
+              logLine = `\n[SaltStack Minion] Executing states: pkg.installed, file.managed [/etc/nginx/nginx.conf], service.running... OK`;
+            } else if (nextProgress >= 85 && nextProgress < 100) {
+              logLine = `\n[Salt-Returner] Minion [${host}] returned exit_code=0. Changes: 4, Failures: 0. Drift: 0.00%`;
             } else if (isDone) {
               logLine = `\n✓ [SaltStack] Highstate execution complete. All states converged successfully.\n✓ Deployment converged successfully across all target minions.`;
             }
           } else if (tool === 'chef') {
-            if (nextProgress >= 74 && nextProgress < 82) {
-              logLine = `\n[Chef Client] Syncing template [/etc/nginx/conf.d/tls.conf] on ${host} (checksum verified)`;
-            } else if (nextProgress >= 82 && nextProgress < 90) {
-              logLine = `\n[Chef Client] Reloading service[nginx] workers without downtime... OK`;
-            } else if (nextProgress >= 90 && nextProgress < 100) {
-              logLine = `\n[Chef Client] InSpec compliance verification on ${host}... Passed (0 failures)`;
+            if (nextProgress >= 15 && nextProgress < 30) {
+              logLine = `\n[Chef Client] Authenticating node [${host}] against Chef Server (HTTPS port 443)... OK`;
+            } else if (nextProgress >= 30 && nextProgress < 50) {
+              logLine = `\n[Chef Client] Resolving run-list and downloading cookbooks: nginx (1.0.0), app_server (1.0.0), postgresql, monitoring... OK`;
+            } else if (nextProgress >= 50 && nextProgress < 70) {
+              logLine = `\n[Chef Client] Compiling attributes & rendering templates [/etc/nginx/sites-available/app_proxy.conf, /etc/systemd/system/deployment-tools.service]... OK`;
+            } else if (nextProgress >= 70 && nextProgress < 85) {
+              logLine = `\n[Chef Client] Converging resources: package[nginx], template[app_proxy.conf], execute[systemctl daemon-reload], service[nginx] reload... OK`;
+            } else if (nextProgress >= 85 && nextProgress < 100) {
+              logLine = `\n[Chef Client] InSpec compliance verification on ${host}: 14 controls executed, 0 failures... Compliant`;
             } else if (isDone) {
-              logLine = `\n✓ [Chef Client] Run complete. 6/6 resources updated.\n✓ Deployment converged successfully across all target nodes.`;
+              logLine = `\n✓ [Chef Client] Run complete. Resources converged (100% idempotent).\n✓ Deployment converged successfully across all target nodes.`;
             }
           } else {
             // Hybrid (Chef + Salt)
-            if (nextProgress >= 74 && nextProgress < 82) {
-              logLine = `\n[Chef Client] Syncing cookbooks & resolving dependencies... OK`;
-            } else if (nextProgress >= 82 && nextProgress < 90) {
-              logLine = `\n[SaltStack Minion] Applying highstate configuration to minions: ${host}... OK`;
-            } else if (nextProgress >= 90 && nextProgress < 100) {
-              logLine = `\n[Orchestrator] Multi-engine compliance & latency verification... Passed`;
+            if (nextProgress >= 15 && nextProgress < 30) {
+              logLine = `\n[Orchestrator] Dual-engine pre-flight verification: Chef HTTPS 443 + Salt ZeroMQ 4505/4506... Responsive`;
+            } else if (nextProgress >= 30 && nextProgress < 50) {
+              logLine = `\n[Orchestrator] Syncing Chef cookbooks (nginx, app_server) and Salt state formulas (common, postgresql, monitoring)... OK`;
+            } else if (nextProgress >= 50 && nextProgress < 70) {
+              logLine = `\n[Engine 1: Chef] Compiling resource collection & rendering systemd service templates on ${host}... OK`;
+            } else if (nextProgress >= 70 && nextProgress < 85) {
+              logLine = `\n[Engine 2: SaltStack] Minion highstate execution on ${host}: postgresql, node_exporter services started... OK`;
+            } else if (nextProgress >= 85 && nextProgress < 100) {
+              logLine = `\n[Orchestrator] Multi-engine compliance & latency verification... Passed (0 errors)`;
             } else if (isDone) {
               logLine = `\n✓ [Orchestrator] Hybrid deployment complete.\n✓ All Chef cookbooks and Salt states converged successfully.`;
             }
@@ -307,6 +319,20 @@ export default function App() {
               />
             )}
           </div>
+
+          {/* Data Source Footer */}
+          <footer className="mt-8 pt-3 pb-2 border-t border-white/[0.05] flex items-center justify-between text-[11px] font-mono text-slate-500">
+            <span>Deployment Tools • Dual Chef & SaltStack Orchestration</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                isUsingFallbackConfigs
+                  ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300'
+                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+              }`}
+            >
+              {isUsingFallbackConfigs ? 'data: bundled' : 'data: api'}
+            </span>
+          </footer>
         </main>
       </div>
 
